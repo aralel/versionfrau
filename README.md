@@ -70,15 +70,18 @@ build=0
 
 ## Extension Properties
 
-| Property | Type | Example | Description |
-|---|---|---|---|
-| `versionFrau.major` | `Int` | `1` | Major version |
-| `versionFrau.minor` | `Int` | `0` | Minor version |
-| `versionFrau.patch` | `Int` | `3` | Patch version |
-| `versionFrau.build` | `Int` | `7` | Build version |
-| `versionFrau.versionName` | `String` | `"1.0.3"` | `major.minor.patch` |
-| `versionFrau.fullVersionName` | `String` | `"1.0.3.7"` | `major.minor.patch.build` |
-| `versionFrau.versionCode` | `Int` | `1000307` | Computed integer for Android |
+| Property | Type | Debug example | Release example | Description |
+|---|---|---|---|---|
+| `versionFrau.major` | `Int` | `1` | `1` | Major version |
+| `versionFrau.minor` | `Int` | `0` | `0` | Minor version |
+| `versionFrau.patch` | `Int` | `3` | `3` | Patch version |
+| `versionFrau.build` | `Int` | `42` | `0` | Build version (reset to 0 on release) |
+| `versionFrau.versionName` | `String` | `"1.0.3.42"` | `"1.0.3"` | Includes build only on debug |
+| `versionFrau.versionCode` | `Int` | `1000342` | `1000300` | Includes build only on debug |
+| `versionFrau.fullVersionName` | `String` | `"1.0.3.42"` | `"1.0.3.42"` | Always includes build |
+
+> **Note:** `versionName` and `versionCode` are build-type-aware and are resolved at
+> configuration time by inspecting the Gradle start parameters — no extra code needed.
 
 ## Manual Tasks
 

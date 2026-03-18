@@ -14,9 +14,44 @@ class VersionFrauPlugin : Plugin<Project> {
             project
         )
 
+        // Detect build type immediately so the flag is available when the user's
+        // build script reads versionFrau.versionName / versionFrau.versionCode
+        // inside android { defaultConfig { } } during configuration.
+        extension.isDebugBuild = resolveIsDebugBuild(project)
+
         project.afterEvaluate {
             setupVersionTasks(project, extension)
         }
+    }
+
+    /**
+     * Inspects the Gradle start parameters to determine whether the user is running
+     * a debug or release build.  A task is considered a "debug build" when its
+     * (short) name contains "debug" and does NOT contain "release".
+     *
+     * Examples that return true:
+     *   assembleDebug, :app:assembleDebug, bundleDebug, app:bundleDebug
+     *
+     * Examples that return false (release):
+     *   assembleRelease, bundleRelease, build (generic – treated as release-like)
+     *
+     * If no explicit debug/release task is found we default to false (release-like),
+     * which is the safer option for version-name formatting.
+     */
+    private fun resolveIsDebugBuild(project: Project): Boolean {
+        val requestedTaskNames = project.gradle.startParameter.taskNames
+        var foundDebug = false
+        var foundRelease = false
+
+        for (requestedTaskName in requestedTaskNames) {
+            // Strip any leading project path (e.g. ":app:assembleDebug" → "assembleDebug")
+            val shortTaskName = requestedTaskName.substringAfterLast(':').lowercase()
+            if (shortTaskName.contains("debug")) foundDebug = true
+            if (shortTaskName.contains("release")) foundRelease = true
+        }
+
+        // Debug wins only if there is an explicit debug task and no release task requested.
+        return foundDebug && !foundRelease
     }
 
     private fun setupVersionTasks(project: Project, extension: VersionFrauExtension) {

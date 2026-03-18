@@ -7,21 +7,49 @@ open class VersionFrauExtension(private val project: Project) {
 
     var versionFile: File = project.file("version.properties")
 
+    /**
+     * Set by the plugin at apply-time by inspecting Gradle's requested task names.
+     * true  → debug build  (versionName includes build, versionCode includes build)
+     * false → release build (versionName is major.minor.patch, versionCode excludes build)
+     */
+    internal var isDebugBuild: Boolean = false
+
     val major: Int get() = readVersion().major
     val minor: Int get() = readVersion().minor
     val patch: Int get() = readVersion().patch
     val build: Int get() = readVersion().build
 
+    /**
+     * Returns the version name for the current build type:
+     * - Debug:   "major.minor.patch.build"  (e.g. "1.0.3.42")
+     * - Release: "major.minor.patch"         (e.g. "1.0.3")
+     */
     val versionName: String get() {
         val version = readVersion()
-        return "${version.major}.${version.minor}.${version.patch}"
+        return if (isDebugBuild) {
+            "${version.major}.${version.minor}.${version.patch}.${version.build}"
+        } else {
+            "${version.major}.${version.minor}.${version.patch}"
+        }
     }
 
+    /**
+     * Returns the version code for the current build type:
+     * - Debug:   major * 1_000_000 + minor * 10_000 + patch * 100 + build
+     * - Release: major * 1_000_000 + minor * 10_000 + patch * 100
+     *
+     * The release code always ends in 00, leaving room for up to 99 debug builds per patch.
+     */
     val versionCode: Int get() {
         val version = readVersion()
-        return version.major * 1_000_000 + version.minor * 10_000 + version.patch * 100 + version.build
+        return if (isDebugBuild) {
+            version.major * 1_000_000 + version.minor * 10_000 + version.patch * 100 + version.build
+        } else {
+            version.major * 1_000_000 + version.minor * 10_000 + version.patch * 100
+        }
     }
 
+    /** Always returns "major.minor.patch.build" regardless of build type. */
     val fullVersionName: String get() {
         val version = readVersion()
         return "${version.major}.${version.minor}.${version.patch}.${version.build}"

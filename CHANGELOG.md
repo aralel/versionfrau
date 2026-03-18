@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1] - 2026-03-18
+
+### Changed
+- `versionName` now returns `major.minor.patch.build` for debug builds and `major.minor.patch` for release builds
+- `versionCode` now includes the build component for debug builds only; release builds always end in `00` (e.g. `1000300`)
+- `fullVersionName` is unchanged — always returns `major.minor.patch.build` for both build types
+- Build-type is resolved at plugin apply-time from Gradle start parameters so user code in `android { defaultConfig { } }` sees the correct values with no extra configuration
+
 ## [1.0.0] - 2026-03-17
 
 ### Added
