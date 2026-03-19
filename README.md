@@ -63,10 +63,14 @@ patch=0
 build=0
 ```
 
-| Build type | What happens |
-|---|---|
-| `./gradlew assembleDebug` | `build` incremented (e.g. `0 → 1`) |
-| `./gradlew assembleRelease` | `patch` incremented, `build` reset to 0 |
+| Build type | What happens | Output filename |
+|---|---|---|
+| `./gradlew assembleDebug` | `build` incremented | `app-debug-v1.0.3.42.apk` |
+| `./gradlew bundleDebug` | `build` incremented | `app-debug-v1.0.3.42.aab` |
+| `./gradlew assembleRelease` | `patch` incremented, `build` reset to 0 | `app-release-v1.0.4.apk` |
+| `./gradlew bundleRelease` | `patch` incremented, `build` reset to 0 | `app-release-v1.0.4.aab` |
+
+The output file is renamed automatically — no extra tasks or wiring needed.
 
 ## Extension Properties
 

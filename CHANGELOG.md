@@ -8,6 +8,13 @@
 - `fullVersionName` is unchanged — always returns `major.minor.patch.build` for both build types
 - Build-type is resolved at plugin apply-time from Gradle start parameters so user code in `android { defaultConfig { } }` sees the correct values with no extra configuration
 
+### Added
+- Automatic APK and AAB output file renaming after each build
+  - Debug:   `{project}-debug-v{major}.{minor}.{patch}.{build}.apk|aab`
+  - Release: `{project}-release-v{major}.{minor}.{patch}.apk|aab`
+- Renaming uses the post-increment version so the filename always reflects the actual build version
+- Product flavors supported — each variant is handled independently
+
 ## [1.0.0] - 2026-03-17
 
 ### Added
