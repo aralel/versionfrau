@@ -1,0 +1,37 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.0'
+    }
+}
+
+plugins {
+    id 'com.aralel.versionfrau'
+}
+
+apply plugin: 'com.android.application'
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+android {
+    namespace 'com.example.sample'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.example.sample'
+        minSdk 24
+        targetSdk 34
+        versionCode versionFrau.versionCode
+        versionName versionFrau.versionName
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}

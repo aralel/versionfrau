@@ -1,39 +1,32 @@
 package com.aralel.versionfrau
 
 import com.android.build.gradle.AppExtension
-import org.gradle.api.DefaultTask
 import org.gradle.api.Project
-import org.gradle.api.tasks.TaskProvider
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * Encapsulates all Android-specific plugin logic. This class is loaded only when
- * the Android Gradle Plugin is on the classpath, keeping the main VersionFrauPlugin
- * class loadable in non-Android (pure Gradle) environments.
+ * Encapsulates Android-specific plugin logic that requires AGP classes on the classpath:
+ *   - BUILD_TIME buildConfigField injection
+ *   - APK / AAB output file renaming
+ *
+ * Task dependency wiring (incrementBuildVersion → assembleDebug, etc.) is handled
+ * in [VersionFrauPlugin.wireTaskDependencies] using plain task-name matching, so it
+ * works even when AGP classes are not visible to the plugin's classloader.
  */
 internal object AndroidIntegration {
 
-    fun configure(
-        project: Project,
-        extension: VersionFrauExtension,
-        incrementBuildTask: TaskProvider<DefaultTask>,
-        incrementPatchTask: TaskProvider<DefaultTask>
-    ) {
+    /**
+     * Injects a BUILD_TIME buildConfigField into the android defaultConfig.
+     * Must be called during the configuration phase (before afterEvaluate)
+     * so AGP picks it up when finalizing variants.
+     */
+    fun injectBuildTime(project: Project) {
         val androidAppExtension = project.extensions.findByName("android") as? AppExtension
             ?: return
 
-        configureBuildTimeField(androidAppExtension)
-        hookIntoAndroidTasks(project, extension, androidAppExtension, incrementBuildTask, incrementPatchTask)
-    }
-
-    /**
-     * Injects a BUILD_TIME buildConfigField into every Android build variant.
-     * The value is the build timestamp formatted as "MMM dd, yyyy".
-     */
-    private fun configureBuildTimeField(androidAppExtension: AppExtension) {
         val buildTimeValue = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
             .format(Date(System.currentTimeMillis()))
         androidAppExtension.defaultConfig.buildConfigField(
@@ -44,37 +37,25 @@ internal object AndroidIntegration {
     }
 
     /**
-     * Uses the AGP variant API to wire increment tasks as dependencies of
-     * assemble/bundle tasks. This avoids the timing issues with configureEach
-     * where AGP tasks may already be realized before the callback is registered.
+     * Renames the produced APK / AAB files to include the version after the build.
+     * Must be called in afterEvaluate because it needs applicationVariants.
+     *
+     * The file name format is:
+     *   Debug:   {projectName}-{buildType}-v{major}.{minor}.{patch}.{build}.apk|aab
+     *   Release: {projectName}-{buildType}-v{major}.{minor}.{patch}.apk|aab
      */
-    private fun hookIntoAndroidTasks(
+    fun configureOutputRenaming(
         project: Project,
-        extension: VersionFrauExtension,
-        androidAppExtension: AppExtension,
-        incrementBuildTask: TaskProvider<DefaultTask>,
-        incrementPatchTask: TaskProvider<DefaultTask>
+        extension: VersionFrauExtension
     ) {
+        val androidAppExtension = project.extensions.findByName("android") as? AppExtension
+            ?: return
+
         androidAppExtension.applicationVariants.all { variant ->
             val buildTypeName = variant.buildType.name          // "debug" | "release"
             val variantName = variant.name                       // "debug" | "release" | "freeDebug" …
             val capitalizedVariantName = variantName.replaceFirstChar { it.uppercase() }
             val isDebugVariant = buildTypeName == "debug"
-
-            val incrementTask = if (isDebugVariant) incrementBuildTask else incrementPatchTask
-
-            // Wire the assemble task via variant.assembleProvider (AGP's own TaskProvider)
-            variant.assembleProvider.configure { assembleTask ->
-                assembleTask.dependsOn(incrementTask)
-                assembleTask.mustRunAfter(incrementTask)
-            }
-
-            // Wire the bundle task by name (no direct provider in the legacy AGP variant API)
-            val bundleTaskName = "bundle$capitalizedVariantName"
-            project.tasks.matching { it.name == bundleTaskName }.all { bundleTask ->
-                bundleTask.dependsOn(incrementTask)
-                bundleTask.mustRunAfter(incrementTask)
-            }
 
             // ── APK renaming ────────────────────────────────────────────────
             variant.assembleProvider.configure { assembleTask ->
@@ -98,6 +79,7 @@ internal object AndroidIntegration {
             }
 
             // ── AAB renaming ────────────────────────────────────────────────
+            val bundleTaskName = "bundle$capitalizedVariantName"
             project.tasks.matching { it.name == bundleTaskName }.all { bundleTask ->
                 bundleTask.doLast {
                     val freshVersion = extension.readVersion()
@@ -107,16 +89,22 @@ internal object AndroidIntegration {
                     val aabOutputDir = project.layout.buildDirectory
                         .dir("outputs/bundle/${variantName}")
                         .get().asFile
+
                     if (aabOutputDir.exists()) {
-                        aabOutputDir.listFiles { file -> file.extension == "aab" }
-                            ?.forEach { originalAabFile ->
-                                val renamedAabFile = File(aabOutputDir, "${newAabBaseName}.aab")
-                                if (originalAabFile.renameTo(renamedAabFile)) {
-                                    project.logger.lifecycle("VersionFrau: AAB → ${renamedAabFile.name}")
-                                } else {
-                                    project.logger.warn("VersionFrau: could not rename ${originalAabFile.name}")
-                                }
+                        val aabFiles = aabOutputDir.listFiles { file -> file.extension == "aab" }
+                        if (aabFiles.isNullOrEmpty()) {
+                            project.logger.warn("VersionFrau: no .aab files found in ${aabOutputDir.absolutePath}")
+                        }
+                        aabFiles?.forEach { originalAabFile ->
+                            val renamedAabFile = File(aabOutputDir, "${newAabBaseName}.aab")
+                            if (originalAabFile.renameTo(renamedAabFile)) {
+                                project.logger.lifecycle("VersionFrau: AAB → ${renamedAabFile.name}")
+                            } else {
+                                project.logger.warn("VersionFrau: could not rename ${originalAabFile.name}")
                             }
+                        }
+                    } else {
+                        project.logger.warn("VersionFrau: AAB output dir does not exist: ${aabOutputDir.absolutePath}")
                     }
                 }
             }

@@ -7,14 +7,19 @@
 - `buildTime` property on `VersionFrauExtension` for direct access to the formatted build timestamp
 - Unit tests for `VersionFrauExtension` (version read/write, version name/code formatting, build time)
 - Functional tests using Gradle TestKit verifying debug build increments on every build
+- Android functional tests (7 tests) with real AGP: dry-run task wiring, actual increment, consecutive increments, BUILD_TIME injection, APK renaming
+- Sample Android project (`sample/`) for manual integration testing via composite build
 
 ### Fixed
-- `incrementBuildVersion` not running on `assembleDebug` — `configureEach` in `afterEvaluate` missed AGP tasks that were already realized; now uses `variant.assembleProvider.configure` and `tasks.matching().all` for reliable dependency wiring
+- **`incrementBuildVersion` not running on `assembleDebug`** — root cause was classloader isolation: `AndroidIntegration` referenced AGP classes that weren't visible to the plugin's classloader. Task wiring now uses `project.tasks.all { }` with name matching directly in `VersionFrauPlugin` (no AGP imports), which works reliably regardless of classloader setup or plugin load order
+- **`BUILD_TIME` not appearing in `BuildConfig`** — `defaultConfig.buildConfigField()` in `afterEvaluate` was too late (AGP already finalized variants). Now injected via `pluginManager.withPlugin("com.android.application")` during the configuration phase
+- **`versionCode` formula producing values exceeding `Int.MAX_VALUE`** — changed from `major * 1_000_000_000` to `major * 1_000_000 + minor * 10_000 + patch * 100 + build`
 
 ### Changed
-- Extracted Android-specific plugin logic into `AndroidIntegration` class for better separation and testability
+- Extracted Android-specific plugin logic into `AndroidIntegration` class (BUILD_TIME injection, output renaming only — no task wiring)
 - Plugin now loads cleanly in non-Android Gradle projects (no `NoClassDefFoundError` for `AppExtension`)
-- Increment tasks registered eagerly in `apply()` instead of lazily in `afterEvaluate`; only dependency wiring deferred to `afterEvaluate`
+- Increment tasks registered eagerly in `apply()` instead of lazily in `afterEvaluate`
+- Task dependency wiring moved to `VersionFrauPlugin.wireTaskDependencies()` using `project.tasks.all { }` — no AGP class references needed
 
 ## [1.0.1] - 2026-03-18
 

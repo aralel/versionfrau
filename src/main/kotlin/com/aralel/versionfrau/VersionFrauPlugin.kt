@@ -3,7 +3,6 @@ package com.aralel.versionfrau
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.tasks.TaskProvider
 
 class VersionFrauPlugin : Plugin<Project> {
@@ -21,10 +20,31 @@ class VersionFrauPlugin : Plugin<Project> {
         extension.isDebugBuild = resolveIsDebugBuild(project)
 
         // Register increment tasks eagerly so they are available for dependency wiring.
-        val incrementBuildTask = registerIncrementTasks(project, extension)
+        val incrementTasks = registerIncrementTasks(project, extension)
+
+        // Inject BUILD_TIME as soon as the Android plugin is available.
+        // Must happen BEFORE afterEvaluate so it's included when AGP finalizes variants.
+        project.pluginManager.withPlugin("com.android.application") {
+            try {
+                AndroidIntegration.injectBuildTime(project)
+            } catch (_: NoClassDefFoundError) {
+                // AGP classes not visible — skip silently
+            }
+        }
 
         project.afterEvaluate {
-            wireTaskDependencies(project, extension, incrementBuildTask.first, incrementBuildTask.second)
+            // Wire task dependencies using task names — no AGP class references needed.
+            wireTaskDependencies(project, incrementTasks.first, incrementTasks.second)
+
+            // Configure output renaming (needs variants, so must be in afterEvaluate).
+            val hasAndroidPlugin = project.extensions.findByName("android") != null
+            if (hasAndroidPlugin) {
+                try {
+                    AndroidIntegration.configureOutputRenaming(project, extension)
+                } catch (e: NoClassDefFoundError) {
+                    project.logger.warn("VersionFrau: AGP classes not on classpath — output renaming disabled")
+                }
+            }
         }
     }
 
@@ -109,35 +129,35 @@ class VersionFrauPlugin : Plugin<Project> {
         return Pair(incrementBuildTask, incrementPatchTask)
     }
 
+    /**
+     * Wires increment tasks as dependencies of assemble/bundle/build/jar tasks.
+     * Uses [project.tasks.all] with name matching — no AGP class references, so this
+     * works reliably regardless of classloader isolation or plugin load order.
+     *
+     * [tasks.all] fires for both already-realized tasks AND tasks added later,
+     * which solves the timing issues that [configureEach] had with AGP tasks.
+     */
     private fun wireTaskDependencies(
         project: Project,
-        extension: VersionFrauExtension,
         incrementBuildTask: TaskProvider<DefaultTask>,
         incrementPatchTask: TaskProvider<DefaultTask>
-    ) {
-        val hasAndroidPlugin = project.extensions.findByName("android") != null
-        if (hasAndroidPlugin) {
-            try {
-                AndroidIntegration.configure(
-                    project, extension,
-                    incrementBuildTask, incrementPatchTask
-                )
-            } catch (e: NoClassDefFoundError) {
-                project.logger.warn("VersionFrau: Android plugin detected but AGP classes not found — skipping Android integration")
-            }
-        } else {
-            hookIntoStandardTasks(project, incrementBuildTask, incrementPatchTask)
-        }
-    }
-
-    private fun hookIntoStandardTasks(
-        project: Project,
-        incrementBuildTask: TaskProvider<DefaultTask>,
-        @Suppress("UNUSED_PARAMETER") incrementPatchTask: TaskProvider<DefaultTask>
     ) {
         project.tasks.all { task ->
             val taskName = task.name.lowercase()
             when {
+                // Debug assemble/bundle → increment build
+                taskName.contains("debug") &&
+                    (taskName.startsWith("assemble") || taskName.startsWith("bundle")) -> {
+                    task.dependsOn(incrementBuildTask)
+                    task.mustRunAfter(incrementBuildTask)
+                }
+                // Release assemble/bundle → increment patch
+                taskName.contains("release") &&
+                    (taskName.startsWith("assemble") || taskName.startsWith("bundle")) -> {
+                    task.dependsOn(incrementPatchTask)
+                    task.mustRunAfter(incrementPatchTask)
+                }
+                // Standard Java/Kotlin builds (no Android)
                 taskName == "build" || taskName == "jar" -> {
                     task.dependsOn(incrementBuildTask)
                     task.mustRunAfter(incrementBuildTask)
