@@ -1,11 +1,9 @@
 package com.aralel.versionfrau
 
-import com.android.build.gradle.AppExtension
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
-import java.io.File
 
 class VersionFrauPlugin : Plugin<Project> {
 
@@ -101,34 +99,21 @@ class VersionFrauPlugin : Plugin<Project> {
             }
         }
 
-        // Hook into Android build tasks if the Android application plugin is applied
-        val androidAppExtension = project.extensions.findByName("android") as? AppExtension
-
-        if (androidAppExtension != null) {
-            hookIntoAndroidTasks(project, incrementBuildTask.get(), incrementPatchTask.get())
-            configureOutputFileNaming(project, extension, androidAppExtension)
+        // Try to configure Android-specific integration (BUILD_TIME field, task hooks,
+        // output file renaming). AndroidIntegration is in a separate class so that
+        // VersionFrauPlugin can load even when the Android Gradle Plugin is absent.
+        val hasAndroidPlugin = project.extensions.findByName("android") != null
+        if (hasAndroidPlugin) {
+            try {
+                AndroidIntegration.configure(
+                    project, extension,
+                    incrementBuildTask.get(), incrementPatchTask.get()
+                )
+            } catch (e: NoClassDefFoundError) {
+                project.logger.warn("VersionFrau: Android plugin detected but AGP classes not found — skipping Android integration")
+            }
         } else {
             hookIntoStandardTasks(project, incrementBuildTask.get(), incrementPatchTask.get())
-        }
-    }
-
-    private fun hookIntoAndroidTasks(
-        project: Project,
-        incrementBuildTask: Task,
-        incrementPatchTask: Task
-    ) {
-        project.tasks.configureEach { task ->
-            val taskName = task.name.lowercase()
-            when {
-                taskName.contains("debug") && (taskName.startsWith("assemble") || taskName.startsWith("bundle")) -> {
-                    task.dependsOn(incrementBuildTask)
-                    task.mustRunAfter(incrementBuildTask)
-                }
-                taskName.contains("release") && (taskName.startsWith("assemble") || taskName.startsWith("bundle")) -> {
-                    task.dependsOn(incrementPatchTask)
-                    task.mustRunAfter(incrementPatchTask)
-                }
-            }
         }
     }
 
@@ -145,97 +130,6 @@ class VersionFrauPlugin : Plugin<Project> {
                     task.mustRunAfter(incrementBuildTask)
                 }
             }
-        }
-    }
-
-    /**
-     * Renames the produced APK / AAB files to include the version after the build.
-     *
-     * The file name format is:
-     *   Debug:   {projectName}-{buildType}-v{major}.{minor}.{patch}.{build}.apk|aab
-     *   Release: {projectName}-{buildType}-v{major}.{minor}.{patch}.apk|aab
-     *
-     * Renaming is done in a doLast action so it always uses the ALREADY-INCREMENTED
-     * version (the increment task runs before assemble/bundle as a dependency).
-     */
-    private fun configureOutputFileNaming(
-        project: Project,
-        extension: VersionFrauExtension,
-        androidAppExtension: AppExtension
-    ) {
-        androidAppExtension.applicationVariants.all { variant ->
-            val buildTypeName = variant.buildType.name          // "debug" | "release"
-            val variantName = variant.name                       // "debug" | "release" | "freeDebug" …
-            val capitalizedVariantName = variantName.replaceFirstChar { it.uppercase() }
-            val isDebugVariant = buildTypeName == "debug"
-
-            // ── APK renaming ────────────────────────────────────────────────
-            // doLast on the assemble task: by this point the increment task has
-            // already run, so reading version.properties gives the new values.
-            val assembleTaskName = "assemble$capitalizedVariantName"
-            project.tasks.configureEach { task ->
-                if (task.name == assembleTaskName) {
-                    task.doLast {
-                        val freshVersion = extension.readVersion()
-                        val versionSuffix = buildVersionSuffix(freshVersion, isDebugVariant)
-                        val newApkBaseName = "${project.name}-${buildTypeName}-${versionSuffix}"
-
-                        variant.outputs.forEach { variantOutput ->
-                            val originalApkFile = variantOutput.outputFile
-                            if (originalApkFile.exists()) {
-                                val renamedApkFile = File(originalApkFile.parentFile, "${newApkBaseName}.apk")
-                                if (originalApkFile.renameTo(renamedApkFile)) {
-                                    project.logger.lifecycle("VersionFrau: APK → ${renamedApkFile.name}")
-                                } else {
-                                    project.logger.warn("VersionFrau: could not rename ${originalApkFile.name}")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── AAB renaming ────────────────────────────────────────────────
-            // The bundle task places its output in build/outputs/bundle/{variantName}/.
-            val bundleTaskName = "bundle$capitalizedVariantName"
-            project.tasks.configureEach { task ->
-                if (task.name == bundleTaskName) {
-                    task.doLast {
-                        val freshVersion = extension.readVersion()
-                        val versionSuffix = buildVersionSuffix(freshVersion, isDebugVariant)
-                        val newAabBaseName = "${project.name}-${buildTypeName}-${versionSuffix}"
-
-                        // Standard AGP output location for AABs
-                        val aabOutputDir = project.layout.buildDirectory
-                            .dir("outputs/bundle/${variantName}")
-                            .get().asFile
-                        if (aabOutputDir.exists()) {
-                            aabOutputDir.listFiles { file -> file.extension == "aab" }
-                                ?.forEach { originalAabFile ->
-                                    val renamedAabFile = File(aabOutputDir, "${newAabBaseName}.aab")
-                                    if (originalAabFile.renameTo(renamedAabFile)) {
-                                        project.logger.lifecycle("VersionFrau: AAB → ${renamedAabFile.name}")
-                                    } else {
-                                        project.logger.warn("VersionFrau: could not rename ${originalAabFile.name}")
-                                    }
-                                }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Returns the version portion of the output filename.
-     *   Debug:   "v1.0.3.42"
-     *   Release: "v1.0.3"
-     */
-    private fun buildVersionSuffix(version: VersionData, isDebug: Boolean): String {
-        return if (isDebug) {
-            "v${version.major}.${version.minor}.${version.patch}.${version.build}"
-        } else {
-            "v${version.major}.${version.minor}.${version.patch}"
         }
     }
 }

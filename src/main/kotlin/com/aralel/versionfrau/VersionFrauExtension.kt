@@ -2,10 +2,21 @@ package com.aralel.versionfrau
 
 import org.gradle.api.Project
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 open class VersionFrauExtension(private val project: Project) {
 
     var versionFile: File = project.file("version.properties")
+
+    /**
+     * Returns the current build time formatted as "MMM dd, yyyy" (e.g. "Mar 19, 2026").
+     * Intended for use with Android's buildConfigField.
+     */
+    val buildTime: String
+        get() = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+            .format(Date(System.currentTimeMillis()))
 
     /**
      * Set by the plugin at apply-time by inspecting Gradle's requested task names.

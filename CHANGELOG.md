@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.2] - 2026-03-19
+
+### Added
+- Automatic `BUILD_TIME` buildConfigField injection for every Android build (formatted as "MMM dd, yyyy")
+- `buildTime` property on `VersionFrauExtension` for direct access to the formatted build timestamp
+- Unit tests for `VersionFrauExtension` (version read/write, version name/code formatting, build time)
+- Functional tests using Gradle TestKit verifying debug build increments on every build
+
+### Changed
+- Extracted Android-specific plugin logic into `AndroidIntegration` class for better separation and testability
+- Plugin now loads cleanly in non-Android Gradle projects (no `NoClassDefFoundError` for `AppExtension`)
+
 ## [1.0.1] - 2026-03-18
 
 ### Changed
