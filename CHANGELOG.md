@@ -8,9 +8,13 @@
 - Unit tests for `VersionFrauExtension` (version read/write, version name/code formatting, build time)
 - Functional tests using Gradle TestKit verifying debug build increments on every build
 
+### Fixed
+- `incrementBuildVersion` not running on `assembleDebug` — `configureEach` in `afterEvaluate` missed AGP tasks that were already realized; now uses `variant.assembleProvider.configure` and `tasks.matching().all` for reliable dependency wiring
+
 ### Changed
 - Extracted Android-specific plugin logic into `AndroidIntegration` class for better separation and testability
 - Plugin now loads cleanly in non-Android Gradle projects (no `NoClassDefFoundError` for `AppExtension`)
+- Increment tasks registered eagerly in `apply()` instead of lazily in `afterEvaluate`; only dependency wiring deferred to `afterEvaluate`
 
 ## [1.0.1] - 2026-03-18
 

@@ -4,6 +4,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.tasks.TaskProvider
 
 class VersionFrauPlugin : Plugin<Project> {
 
@@ -19,8 +20,11 @@ class VersionFrauPlugin : Plugin<Project> {
         // inside android { defaultConfig { } } during configuration.
         extension.isDebugBuild = resolveIsDebugBuild(project)
 
+        // Register increment tasks eagerly so they are available for dependency wiring.
+        val incrementBuildTask = registerIncrementTasks(project, extension)
+
         project.afterEvaluate {
-            setupVersionTasks(project, extension)
+            wireTaskDependencies(project, extension, incrementBuildTask.first, incrementBuildTask.second)
         }
     }
 
@@ -54,7 +58,10 @@ class VersionFrauPlugin : Plugin<Project> {
         return foundDebug && !foundRelease
     }
 
-    private fun setupVersionTasks(project: Project, extension: VersionFrauExtension) {
+    private fun registerIncrementTasks(
+        project: Project,
+        extension: VersionFrauExtension
+    ): Pair<TaskProvider<DefaultTask>, TaskProvider<DefaultTask>> {
         val incrementBuildTask = project.tasks.register("incrementBuildVersion", DefaultTask::class.java) { task ->
             task.group = "versioning"
             task.description = "Increments the build version number"
@@ -99,30 +106,36 @@ class VersionFrauPlugin : Plugin<Project> {
             }
         }
 
-        // Try to configure Android-specific integration (BUILD_TIME field, task hooks,
-        // output file renaming). AndroidIntegration is in a separate class so that
-        // VersionFrauPlugin can load even when the Android Gradle Plugin is absent.
+        return Pair(incrementBuildTask, incrementPatchTask)
+    }
+
+    private fun wireTaskDependencies(
+        project: Project,
+        extension: VersionFrauExtension,
+        incrementBuildTask: TaskProvider<DefaultTask>,
+        incrementPatchTask: TaskProvider<DefaultTask>
+    ) {
         val hasAndroidPlugin = project.extensions.findByName("android") != null
         if (hasAndroidPlugin) {
             try {
                 AndroidIntegration.configure(
                     project, extension,
-                    incrementBuildTask.get(), incrementPatchTask.get()
+                    incrementBuildTask, incrementPatchTask
                 )
             } catch (e: NoClassDefFoundError) {
                 project.logger.warn("VersionFrau: Android plugin detected but AGP classes not found — skipping Android integration")
             }
         } else {
-            hookIntoStandardTasks(project, incrementBuildTask.get(), incrementPatchTask.get())
+            hookIntoStandardTasks(project, incrementBuildTask, incrementPatchTask)
         }
     }
 
     private fun hookIntoStandardTasks(
         project: Project,
-        incrementBuildTask: Task,
-        @Suppress("UNUSED_PARAMETER") incrementPatchTask: Task
+        incrementBuildTask: TaskProvider<DefaultTask>,
+        @Suppress("UNUSED_PARAMETER") incrementPatchTask: TaskProvider<DefaultTask>
     ) {
-        project.tasks.configureEach { task ->
+        project.tasks.all { task ->
             val taskName = task.name.lowercase()
             when {
                 taskName == "build" || taskName == "jar" -> {
