@@ -64,14 +64,14 @@ class VersionFrauExtensionTest {
     fun `versionCode includes build for debug`() {
         extension.writeVersion(VersionData(1, 2, 3, 7))
         extension.isDebugBuild = true
-        assertEquals(1_020_307, extension.versionCode)
+        assertEquals(1_002_003_007, extension.versionCode)
     }
 
     @Test
     fun `versionCode excludes build for release`() {
         extension.writeVersion(VersionData(1, 2, 3, 7))
         extension.isDebugBuild = false
-        assertEquals(1_020_300, extension.versionCode)
+        assertEquals(1_002_003_000, extension.versionCode)
     }
 
     @Test

@@ -192,20 +192,23 @@ class VersionFrauPlugin : Plugin<Project> {
             }
 
             if (isBundle) {
-                // AAB: build/outputs/bundle/<variantName>/
-                val aabOutputDir = project.layout.buildDirectory
-                    .dir("outputs/bundle/${variantName}")
-                    .get().asFile
-                if (aabOutputDir.exists()) {
-                    aabOutputDir.listFiles { file -> file.extension == "aab" }
-                        ?.forEach { originalAabFile ->
-                            val renamedAabFile = File(aabOutputDir, "${newBaseName}.aab")
-                            if (originalAabFile.renameTo(renamedAabFile)) {
-                                project.logger.lifecycle("VersionFrau: AAB → ${renamedAabFile.name}")
-                            }
+                // AAB output location varies across AGP versions — search broadly.
+                val bundleBaseDir = project.layout.buildDirectory.dir("outputs/bundle").get().asFile
+                if (bundleBaseDir.exists()) {
+                    val aabFiles = bundleBaseDir.walkTopDown()
+                        .filter { it.isFile && it.extension == "aab" && it.name != "${newBaseName}.aab" }
+                        .toList()
+                    if (aabFiles.isEmpty()) {
+                        project.logger.warn("VersionFrau: no .aab files found under ${bundleBaseDir.absolutePath}")
+                    }
+                    aabFiles.forEach { originalAabFile ->
+                        val renamedAabFile = File(originalAabFile.parentFile, "${newBaseName}.aab")
+                        if (originalAabFile.renameTo(renamedAabFile)) {
+                            project.logger.lifecycle("VersionFrau: AAB → ${renamedAabFile.name}")
                         }
+                    }
                 } else {
-                    project.logger.warn("VersionFrau: AAB output dir not found at ${aabOutputDir.absolutePath}")
+                    project.logger.warn("VersionFrau: AAB output dir not found at ${bundleBaseDir.absolutePath}")
                 }
             }
         }

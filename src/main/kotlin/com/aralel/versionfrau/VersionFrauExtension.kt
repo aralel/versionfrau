@@ -46,10 +46,10 @@ open class VersionFrauExtension(private val project: Project) {
 
     /**
      * Returns the version code for the current build type:
-     * - Debug:   major * 1_000_000_000 + minor * 1000_000 + patch * 1000 + build
-     * - Release: major * 1_000_000_000 + minor * 1000_000 + patch * 1000
+     * - Debug:   major * 1_000_000_000 + minor * 1_000_000 + patch * 1_000 + build
+     * - Release: major * 1_000_000_000 + minor * 1_000_000 + patch * 1_000
      *
-     * The release code always ends in 00, leaving room for up to 99 debug builds per patch.
+     * The release code always ends in 000, leaving room for up to 999 debug builds per patch.
      */
     val versionCode: Int get() {
         val version = readVersion()
