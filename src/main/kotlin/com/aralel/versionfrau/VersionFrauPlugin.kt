@@ -160,11 +160,10 @@ class VersionFrauPlugin : Plugin<Project> {
         val taskName = task.name
         val isAssemble = taskName.lowercase().startsWith("assemble")
         val isBundle = taskName.lowercase().startsWith("bundle")
-        val prefix = if (isAssemble) "assemble" else if (isBundle) "bundle" else return
+        // val prefix = if (isAssemble) "assemble" else if (isBundle) "bundle" else return
 
         // Extract variant name: "assembleDebug" → "Debug" → "debug"
-        val variantName = taskName.removePrefix(prefix)
-            .replaceFirstChar { it.lowercase() }
+        // val variantName = taskName.removePrefix(prefix).replaceFirstChar { it.lowercase() }
         val buildTypeName = if (isDebugVariant) "debug" else "release"
 
         task.doLast {
@@ -193,7 +192,11 @@ class VersionFrauPlugin : Plugin<Project> {
 
             if (isBundle) {
                 // AAB output location varies across AGP versions — search broadly.
-                val bundleBaseDir = project.layout.buildDirectory.dir("outputs/bundle").get().asFile
+                var bundleBaseDir = project.layout.buildDirectory.dir("outputs/bundle").get().asFile
+                if (!bundleBaseDir.exists()) {
+                    // release
+                    bundleBaseDir = project.layout.projectDirectory.dir("release").asFile
+                }
                 if (bundleBaseDir.exists()) {
                     val aabFiles = bundleBaseDir.walkTopDown()
                         .filter { it.isFile && it.extension == "aab" && it.name != "${newBaseName}.aab" }
