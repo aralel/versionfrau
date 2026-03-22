@@ -12,14 +12,15 @@
 
 ### Fixed
 - **`incrementBuildVersion` not running on `assembleDebug`** — root cause was classloader isolation: `AndroidIntegration` referenced AGP classes that weren't visible to the plugin's classloader. Task wiring now uses `project.tasks.all { }` with name matching directly in `VersionFrauPlugin` (no AGP imports), which works reliably regardless of classloader setup or plugin load order
+- **AAB/APK output renaming not working** — same classloader issue as above; output renaming moved to `VersionFrauPlugin` using conventional file paths instead of AGP variant API
 - **`BUILD_TIME` not appearing in `BuildConfig`** — `defaultConfig.buildConfigField()` in `afterEvaluate` was too late (AGP already finalized variants). Now injected via `pluginManager.withPlugin("com.android.application")` during the configuration phase
 - **`versionCode` formula producing values exceeding `Int.MAX_VALUE`** — changed from `major * 1_000_000_000` to `major * 1_000_000 + minor * 10_000 + patch * 100 + build`
+- **Spurious task matching** — internal AGP tasks like `bundleReleaseResources` no longer matched; lifecycle task detection now requires name to end with "debug" or "release"
 
 ### Changed
-- Extracted Android-specific plugin logic into `AndroidIntegration` class (BUILD_TIME injection, output renaming only — no task wiring)
-- Plugin now loads cleanly in non-Android Gradle projects (no `NoClassDefFoundError` for `AppExtension`)
+- All task wiring AND output renaming handled in `VersionFrauPlugin` — zero AGP class references
+- `AndroidIntegration` reduced to BUILD_TIME injection only (the one feature that truly needs `AppExtension`)
 - Increment tasks registered eagerly in `apply()` instead of lazily in `afterEvaluate`
-- Task dependency wiring moved to `VersionFrauPlugin.wireTaskDependencies()` using `project.tasks.all { }` — no AGP class references needed
 
 ## [1.0.1] - 2026-03-18
 
