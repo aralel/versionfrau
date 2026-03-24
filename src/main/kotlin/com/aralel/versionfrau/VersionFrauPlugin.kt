@@ -25,12 +25,10 @@ class VersionFrauPlugin : Plugin<Project> {
 
         // Inject BUILD_TIME as soon as the Android plugin is available.
         // Must happen BEFORE afterEvaluate so it's included when AGP finalizes variants.
+        // Inject BUILD_TIME as soon as the Android plugin is available.
+        // Uses reflection internally so classloader isolation cannot block it.
         project.pluginManager.withPlugin("com.android.application") {
-            try {
-                AndroidIntegration.injectBuildTime(project)
-            } catch (_: NoClassDefFoundError) {
-                // AGP classes not visible — skip silently
-            }
+            AndroidIntegration.injectBuildTime(project)
         }
 
         project.afterEvaluate {

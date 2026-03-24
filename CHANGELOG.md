@@ -3,7 +3,8 @@
 ## [Unreleased]
 
 ### Fixed
-- `BUILD_TIME` not appearing in `BuildConfig` on AGP 8.x+ projects — the plugin now explicitly sets `buildFeatures.buildConfig = true` so BuildConfig generation is enabled regardless of the project's default setting
+- `BUILD_TIME` unresolved in client apps — root cause was Gradle classloader isolation: `AndroidIntegration` imported `AppExtension` directly, causing a silent `NoClassDefFoundError` that was caught and ignored, so `BUILD_TIME` was never injected. Fixed by rewriting `AndroidIntegration` to use reflection exclusively — no AGP class imports, zero classloader dependency
+- `BUILD_TIME` still not generated on AGP 8.x+ even when injection runs — AGP 8.x disables `BuildConfig` generation by default; the plugin now enables it via reflection (`android.buildFeatures.buildConfig = true`) before calling `buildConfigField`
 
 ## [1.0.2] - 2026-03-19
 
