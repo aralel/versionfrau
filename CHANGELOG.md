@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `BUILD_TIME` not appearing in `BuildConfig` on AGP 8.x+ projects — the plugin now explicitly sets `buildFeatures.buildConfig = true` so BuildConfig generation is enabled regardless of the project's default setting
+
 ## [1.0.2] - 2026-03-19
 
 ### Added

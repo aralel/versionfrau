@@ -25,6 +25,9 @@ internal object AndroidIntegration {
         val androidAppExtension = project.extensions.findByName("android") as? AppExtension
             ?: return
 
+        // AGP 8.x+ disables BuildConfig generation by default — enable it so the field appears.
+        androidAppExtension.buildFeatures.buildConfig = true
+
         val buildTimeValue = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
             .format(Date(System.currentTimeMillis()))
         androidAppExtension.defaultConfig.buildConfigField(
@@ -32,5 +35,6 @@ internal object AndroidIntegration {
             "BUILD_TIME",
             "\"$buildTimeValue\""
         )
+        project.logger.lifecycle("VersionFrau: BUILD_TIME = \"$buildTimeValue\"")
     }
 }
