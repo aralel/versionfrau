@@ -23,12 +23,11 @@ class VersionFrauPlugin : Plugin<Project> {
         // Register increment tasks eagerly so they are available for dependency wiring.
         val incrementTasks = registerIncrementTasks(project, extension)
 
-        // Inject BUILD_TIME as soon as the Android plugin is available.
-        // Must happen BEFORE afterEvaluate so it's included when AGP finalizes variants.
-        // Inject BUILD_TIME as soon as the Android plugin is available.
-        // Uses reflection internally so classloader isolation cannot block it.
+        // Configure BUILD_TIME injection as soon as the Android plugin is available.
+        // Uses the stable AGP Variant API (finalizeDsl + onVariants) to enable
+        // buildConfig and inject the field into every variant.
         project.pluginManager.withPlugin("com.android.application") {
-            AndroidIntegration.injectBuildTime(project)
+            AndroidIntegration.configure(project)
         }
 
         project.afterEvaluate {

@@ -1,41 +1,48 @@
 package com.aralel.versionfrau
 
+import com.android.build.api.variant.AndroidComponentsExtension
+import com.android.build.api.variant.BuildConfigField
 import org.gradle.api.Project
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * Injects BUILD_TIME into the Android BuildConfig using reflection instead of direct
- * AGP class imports. This avoids NoClassDefFoundError caused by Gradle classloader
- * isolation — the plugin JAR's classloader may not see AGP classes even when the user's
- * project has AGP applied.
+ * Injects BUILD_TIME into the Android BuildConfig using the stable AGP Variant API.
+ *
+ * - [AndroidComponentsExtension.finalizeDsl] enables `buildFeatures.buildConfig` after
+ *   the user's DSL but before variants are created.
+ * - [AndroidComponentsExtension.onVariants] adds the BUILD_TIME field to every variant
+ *   via the documented [BuildConfigField] API.
  */
 internal object AndroidIntegration {
 
-    fun injectBuildTime(project: Project) {
-        val androidExtension = project.extensions.findByName("android") ?: return
+    fun configure(project: Project) {
+        val androidComponents = project.extensions
+            .getByType(AndroidComponentsExtension::class.java)
 
         val buildTimeValue = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
             .format(Date(System.currentTimeMillis()))
 
         // Enable BuildConfig generation — AGP 8.x+ has it disabled by default.
-        // Reflective call equivalent to: android.buildFeatures.buildConfig = true
-            val buildFeatures = androidExtension.javaClass
-                .getMethod("getBuildFeatures")
-                .invoke(androidExtension)
-            buildFeatures.javaClass
-                .getMethod("setBuildConfig", Boolean::class.javaPrimitiveType)
-                .invoke(buildFeatures, true)
+        // finalizeDsl runs after the user's android { } block but before variants are created,
+        // so this won't conflict with anything the user has set.
+        androidComponents.finalizeDsl { extension ->
+            extension.buildFeatures.buildConfig = true
+        }
 
-        // Reflective call equivalent to:
-        // android.defaultConfig.buildConfigField("String", "BUILD_TIME", "\"$buildTimeValue\"")
-            val defaultConfig = androidExtension.javaClass
-                .getMethod("getDefaultConfig")
-                .invoke(androidExtension)
-            defaultConfig.javaClass
-                .getMethod("buildConfigField", String::class.java, String::class.java, String::class.java)
-                .invoke(defaultConfig, "String", "BUILD_TIME", "\"$buildTimeValue\"")
-            project.logger.lifecycle("VersionFrau: BUILD_TIME = \"$buildTimeValue\"")
+        // Inject BUILD_TIME into every variant's BuildConfig using the Variant API.
+        androidComponents.onVariants { variant ->
+            variant.buildConfigFields.put(
+                "BUILD_TIME",
+                BuildConfigField(
+                    type = "String",
+                    value = "\"$buildTimeValue\"",
+                    comment = "Build timestamp injected by VersionFrau"
+                )
+            )
+        }
+
+        project.logger.lifecycle("VersionFrau: BUILD_TIME = \"$buildTimeValue\"")
     }
 }
