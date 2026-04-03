@@ -27,6 +27,7 @@ internal object AndroidIntegration {
         // Enable BuildConfig generation — AGP 8.x+ has it disabled by default.
         // finalizeDsl runs after the user's android { } block but before variants are created,
         // so this won't conflict with anything the user has set.
+        @Suppress("UnstableApiUsage")
         androidComponents.finalizeDsl { extension ->
             extension.buildFeatures.buildConfig = true
         }

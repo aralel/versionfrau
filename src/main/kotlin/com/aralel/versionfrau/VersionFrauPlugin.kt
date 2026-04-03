@@ -176,9 +176,9 @@ class VersionFrauPlugin : Plugin<Project> {
                 // APK: build/outputs/apk/<variant>/ (simple) or build/outputs/apk/<flavor>/<buildType>/
                 val apkBaseDir = project.layout.buildDirectory.dir("outputs/apk").get().asFile
                 if (apkBaseDir.exists()) {
-                    apkBaseDir.walkTopDown()
-                        .filter { it.isFile && it.extension == "apk" && !it.name.startsWith("${newBaseName}.") }
-                        .forEach { originalApkFile ->
+                  apkBaseDir.walkTopDown()
+                    .filter { it.isFile && it.extension == "apk" && !it.name.startsWith("${newBaseName}.") }
+                    .maxByOrNull { it.lastModified() }!!.let { originalApkFile ->
                             val renamedApkFile = File(originalApkFile.parentFile, "${newBaseName}.apk")
                             if (originalApkFile.renameTo(renamedApkFile)) {
                                 project.logger.lifecycle("VersionFrau: APK → ${renamedApkFile.name}")
@@ -201,7 +201,7 @@ class VersionFrauPlugin : Plugin<Project> {
                     if (aabFiles.isEmpty()) {
                         project.logger.warn("VersionFrau: no .aab files found under ${bundleBaseDir.absolutePath}")
                     }
-                    aabFiles.forEach { originalAabFile ->
+                    aabFiles.last().let { originalAabFile ->
                         val renamedAabFile = File(originalAabFile.parentFile, "${newBaseName}.aab")
                         if (originalAabFile.renameTo(renamedAabFile)) {
                             project.logger.lifecycle("VersionFrau: AAB → ${renamedAabFile.name}")
