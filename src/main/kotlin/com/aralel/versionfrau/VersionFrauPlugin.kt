@@ -177,7 +177,7 @@ class VersionFrauPlugin : Plugin<Project> {
                 val apkBaseDir = project.layout.buildDirectory.dir("outputs/apk").get().asFile
                 if (apkBaseDir.exists()) {
                   apkBaseDir.walkTopDown()
-                    .filter { it.isFile && it.extension == "apk" && !it.name.startsWith("${newBaseName}.") }
+                    .filter { it.isFile && it.extension == "apk" }
                     .maxByOrNull { it.lastModified() }!!.let { originalApkFile ->
                             val renamedApkFile = File(originalApkFile.parentFile, "${newBaseName}.apk")
                             if (originalApkFile.renameTo(renamedApkFile)) {
@@ -195,18 +195,15 @@ class VersionFrauPlugin : Plugin<Project> {
                     bundleBaseDir = project.layout.projectDirectory.dir("release").asFile
                 }
                 if (bundleBaseDir.exists()) {
-                    val aabFiles = bundleBaseDir.walkTopDown()
-                        .filter { it.isFile && it.extension == "aab" && it.name != "${newBaseName}.aab" }
-                        .toList()
-                    if (aabFiles.isEmpty()) {
-                        project.logger.warn("VersionFrau: no .aab files found under ${bundleBaseDir.absolutePath}")
-                    }
-                    aabFiles.last().let { originalAabFile ->
-                        val renamedAabFile = File(originalAabFile.parentFile, "${newBaseName}.aab")
-                        if (originalAabFile.renameTo(renamedAabFile)) {
-                            project.logger.lifecycle("VersionFrau: AAB → ${renamedAabFile.name}")
+                    bundleBaseDir.walkTopDown()
+                        .filter { it.isFile && it.extension == "aab" }
+                        .maxByOrNull { it.lastModified() }!!.let { originalAabFile ->
+                            val renamedAabFile =
+                                File(originalAabFile.parentFile, "${newBaseName}.aab")
+                            if (originalAabFile.renameTo(renamedAabFile)) {
+                                project.logger.lifecycle("VersionFrau: AAB → ${renamedAabFile.name}")
+                            }
                         }
-                    }
                 } else {
                     project.logger.warn("VersionFrau: AAB output dir not found at ${bundleBaseDir.absolutePath}")
                 }
