@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Product flavors: only one APK/AAB was renamed per build** — output renaming previously picked the single most-recently-modified file under `outputs/`, so with flavors (e.g. `assembleDebug` building `free` + `paid`) only one flavor's APK got renamed, chosen by timestamp. Renaming is now scoped per variant: each lifecycle task (`assembleFreeDebug`, `bundleFreeRelease`, …) renames all fresh outputs in its own variant directory (`outputs/apk/<flavor>/<buildType>/`, `outputs/bundle/<flavorBuildType>/`)
+- **Product flavors: renamed files lost the flavor name** — the new name was always `{project}-{buildType}-v…`; renaming now keeps AGP's original base name (e.g. `app-free-debug` → `app-free-debug-v1.2.3.4.apk`), which also keeps ABI-split APKs distinct
+- **Product flavors: rename action ran multiple times per build** — both the aggregate task (`assembleDebug`) and every per-flavor task matched, each re-renaming the same "last modified" file. Aggregate tasks on flavored projects now skip silently (no variant dir of their own) while per-flavor tasks handle their own outputs
+- **Crash when an output dir existed but contained no APK/AAB** — `maxByOrNull { … }!!` threw an NPE and failed the build; renaming now simply skips when there is nothing to rename
+- **Stale outputs from previous builds re-renamed** — files already carrying a `-vX.Y.Z(.B)` suffix are now left untouched instead of competing in the "last modified" pick (replaces the previous last-file-created heuristic with a deterministic rule)
+- **Flavored AAB directory layout not found** — bundle renaming now looks in `outputs/bundle/<flavorBuildType>/` (e.g. `freeRelease`), matching AGP's flavored layout
+
+### Added
+- Android functional tests covering product flavors: dry-run wiring for `assembleFreeDebug`/`assembleFreeRelease`, per-flavor APK renaming, all-flavor renaming with a single increment on `assembleDebug`, and `BUILD_TIME` in flavored `BuildConfig`
+
 ### Changed
 - Rewrote `AndroidIntegration` to use the stable AGP Variant API (`AndroidComponentsExtension`) instead of reflection
   - `finalizeDsl` enables `buildFeatures.buildConfig = true` at the correct lifecycle point

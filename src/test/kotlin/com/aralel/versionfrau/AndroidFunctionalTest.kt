@@ -62,6 +62,24 @@ class AndroidFunctionalTest {
 
         // build.gradle (Groovy) — both AGP and VersionFrau on the same buildscript classpath
         buildFile = File(projectDir, "build.gradle")
+        writeBuildFile()
+
+        // Minimal AndroidManifest.xml
+        val mainDir = File(projectDir, "src/main")
+        mainDir.mkdirs()
+        File(mainDir, "AndroidManifest.xml").writeText(
+            """<?xml version="1.0" encoding="utf-8"?>
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                <application />
+            </manifest>
+            """.trimIndent()
+        )
+
+        // version.properties
+        versionFile = File(projectDir, "version.properties")
+    }
+
+    private fun writeBuildFile(androidExtraBlock: String = "") {
         buildFile.writeText(
             """
             buildscript {
@@ -96,23 +114,22 @@ class AndroidFunctionalTest {
                 buildFeatures {
                     buildConfig true
                 }
+                $androidExtraBlock
             }
             """.trimIndent()
         )
+    }
 
-        // Minimal AndroidManifest.xml
-        val mainDir = File(projectDir, "src/main")
-        mainDir.mkdirs()
-        File(mainDir, "AndroidManifest.xml").writeText(
-            """<?xml version="1.0" encoding="utf-8"?>
-            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-                <application />
-            </manifest>
+    private fun writeBuildFileWithFlavors() {
+        writeBuildFile(
+            """
+            flavorDimensions 'tier'
+            productFlavors {
+                free { dimension 'tier' }
+                paid { dimension 'tier' }
+            }
             """.trimIndent()
         )
-
-        // version.properties
-        versionFile = File(projectDir, "version.properties")
     }
 
     private fun seedVersion(major: Int = 1, minor: Int = 0, patch: Int = 0, build: Int = 0) {
@@ -258,6 +275,100 @@ class AndroidFunctionalTest {
         assertTrue(
             renamedApk != null,
             "Expected APK with version v1.2.3.1, found: ${apkFiles?.map { it.name }}"
+        )
+    }
+
+    // ─── Product flavors ──────────────────────────────────────────────────
+
+    @Test
+    fun `flavored assembleFreeDebug triggers incrementBuildVersion in dry run`() {
+        writeBuildFileWithFlavors()
+        seedVersion(build = 0)
+
+        val result = gradleRunner("assembleFreeDebug", "--dry-run").build()
+        val output = result.output
+
+        assertTrue(
+            output.contains(":incrementBuildVersion"),
+            "Expected incrementBuildVersion in dry-run output:\n$output"
+        )
+    }
+
+    @Test
+    fun `flavored assembleFreeRelease triggers incrementPatchVersion in dry run`() {
+        writeBuildFileWithFlavors()
+        seedVersion(patch = 5)
+
+        val result = gradleRunner("assembleFreeRelease", "--dry-run").build()
+        val output = result.output
+
+        assertTrue(
+            output.contains(":incrementPatchVersion"),
+            "Expected incrementPatchVersion in dry-run output:\n$output"
+        )
+    }
+
+    @Test
+    fun `flavored assembleFreeDebug renames only the free flavor APK`() {
+        writeBuildFileWithFlavors()
+        seedVersion(major = 1, minor = 2, patch = 3, build = 0)
+
+        gradleRunner("assembleFreeDebug").build()
+
+        val freeApkDir = File(projectDir, "build/outputs/apk/free/debug")
+        assertTrue(freeApkDir.exists(), "APK output dir should exist: ${freeApkDir.absolutePath}")
+
+        val freeApkFiles = freeApkDir.listFiles { file -> file.extension == "apk" }
+        val renamedFreeApk = freeApkFiles?.firstOrNull { it.name.contains("free") && it.name.contains("v1.2.3.1") }
+        assertTrue(
+            renamedFreeApk != null,
+            "Expected free APK with version v1.2.3.1, found: ${freeApkFiles?.map { it.name }}"
+        )
+    }
+
+    @Test
+    fun `flavored assembleDebug renames APKs of ALL flavors and increments once`() {
+        writeBuildFileWithFlavors()
+        seedVersion(major = 1, minor = 2, patch = 3, build = 0)
+
+        gradleRunner("assembleDebug").build()
+
+        // Increment must run exactly once even though two flavor variants were built.
+        val updatedVersion = readVersion()
+        assertEquals("1", updatedVersion.getProperty("build"))
+
+        for (flavorName in listOf("free", "paid")) {
+            val flavorApkDir = File(projectDir, "build/outputs/apk/$flavorName/debug")
+            assertTrue(flavorApkDir.exists(), "APK output dir should exist: ${flavorApkDir.absolutePath}")
+
+            val flavorApkFiles = flavorApkDir.listFiles { file -> file.extension == "apk" }
+            val renamedFlavorApk = flavorApkFiles?.firstOrNull {
+                it.name.contains(flavorName) && it.name.contains("v1.2.3.1")
+            }
+            assertTrue(
+                renamedFlavorApk != null,
+                "Expected $flavorName APK with version v1.2.3.1, found: ${flavorApkFiles?.map { it.name }}"
+            )
+        }
+    }
+
+    @Test
+    fun `flavored BUILD_TIME field is generated in flavor BuildConfig`() {
+        writeBuildFileWithFlavors()
+        seedVersion()
+
+        gradleRunner("assembleFreeDebug").build()
+
+        val buildConfigFile = File(
+            projectDir,
+            "build/generated/source/buildConfig/free/debug/com/test/app/BuildConfig.java"
+        )
+        assertTrue(buildConfigFile.exists(), "BuildConfig.java should exist at: ${buildConfigFile.absolutePath}")
+
+        val buildConfigContent = buildConfigFile.readText()
+        assertTrue(
+            buildConfigContent.contains("BUILD_TIME"),
+            "BuildConfig should contain BUILD_TIME field:\n$buildConfigContent"
         )
     }
 }

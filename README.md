@@ -72,6 +72,20 @@ build=0
 
 The output file is renamed automatically — no extra tasks or wiring needed.
 
+### Product flavors
+
+Flavored builds are fully supported. Each variant's outputs are renamed independently,
+keeping the flavor in the filename:
+
+| Command | Renamed outputs |
+|---|---|
+| `./gradlew assembleFreeDebug` | `app-free-debug-v1.0.3.42.apk` |
+| `./gradlew assembleDebug` (all flavors) | `app-free-debug-v1.0.3.42.apk`, `app-paid-debug-v1.0.3.42.apk` |
+| `./gradlew bundleFreeRelease` | `app-free-release-v1.0.4.aab` |
+
+The version is incremented **once per build**, no matter how many flavors are assembled.
+ABI-split APKs are all renamed and keep their distinguishing names.
+
 ## Extension Properties
 
 | Property | Type | Debug example | Release example | Description |
