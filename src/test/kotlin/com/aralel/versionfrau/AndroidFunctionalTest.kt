@@ -35,6 +35,10 @@ class AndroidFunctionalTest {
             ).firstOrNull { File(it).isDirectory }
     }
 
+    /** AGP version from gradle/libs.versions.toml, passed in by the test task. */
+    private val androidGradlePluginVersion: String =
+        System.getProperty("versionfrau.agpVersion") ?: error("versionfrau.agpVersion system property not set")
+
     /** Plugin classpath entries from pluginUnderTestMetadata, formatted for Groovy. */
     private val pluginClasspathString: String by lazy {
         val resource = javaClass.classLoader.getResource("plugin-under-test-metadata.properties")
@@ -88,7 +92,7 @@ class AndroidFunctionalTest {
                     mavenCentral()
                 }
                 dependencies {
-                    classpath 'com.android.tools.build:gradle:8.2.0'
+                    classpath 'com.android.tools.build:gradle:$androidGradlePluginVersion'
                     classpath $pluginClasspathString
                 }
             }
@@ -370,5 +374,136 @@ class AndroidFunctionalTest {
             buildConfigContent.contains("BUILD_TIME"),
             "BuildConfig should contain BUILD_TIME field:\n$buildConfigContent"
         )
+    }
+
+    // ─── Bundles: with and without flavors ────────────────────────────────
+
+    @Test
+    fun `bundleRelease without flavors renames the AAB`() {
+        seedVersion(major = 1, minor = 2, patch = 3, build = 7)
+
+        gradleRunner("bundleRelease").build()
+
+        val bundleDir = File(projectDir, "build/outputs/bundle/release")
+        val bundleFileNames = bundleDir.listFiles { file -> file.extension == "aab" }?.map { it.name }
+        assertEquals(listOf("test-android-app-release-v1.2.4.aab"), bundleFileNames)
+    }
+
+    @Test
+    fun `flavored bundleFreeRelease renames the AAB in the flavored bundle dir`() {
+        writeBuildFileWithFlavors()
+        seedVersion(major = 1, minor = 2, patch = 3, build = 7)
+
+        gradleRunner("bundleFreeRelease").build()
+
+        val bundleDir = File(projectDir, "build/outputs/bundle/freeRelease")
+        val bundleFileNames = bundleDir.listFiles { file -> file.extension == "aab" }?.map { it.name }
+        assertEquals(listOf("test-android-app-free-release-v1.2.4.aab"), bundleFileNames)
+    }
+
+    // ─── Switching between flavored and un-flavored ───────────────────────
+
+    @Test
+    fun `flavored assembleDebug leaves stale un-flavored outputs untouched`() {
+        seedVersion(major = 1, minor = 2, patch = 3, build = 0)
+
+        // Leftover from a build made before product flavors were added.
+        val staleApkDir = File(projectDir, "build/outputs/apk/debug")
+        staleApkDir.mkdirs()
+        val staleApk = File(staleApkDir, "test-android-app-debug.apk")
+        staleApk.writeText("stale")
+
+        writeBuildFileWithFlavors()
+        gradleRunner("assembleDebug").build()
+
+        assertTrue(staleApk.exists(), "Stale APK must not be renamed: ${staleApkDir.listFiles()?.map { it.name }}")
+    }
+
+    @Test
+    fun `mixed debug and release flavored build renames every variant with the same version`() {
+        writeBuildFileWithFlavors()
+        seedVersion(major = 1, minor = 2, patch = 3, build = 5)
+
+        gradleRunner("assembleDebug", "bundlePaidRelease").build()
+
+        // Both increments ran (build+1 then patch+1 resets build), before ANY rename happened.
+        val renamedOutputNames = File(projectDir, "build/outputs").walkTopDown()
+            .filter { it.isFile && (it.extension == "apk" || it.extension == "aab") }
+            .map { it.name }
+            .toList()
+        assertEquals(3, renamedOutputNames.size, "Expected free/paid debug APKs and paid release AAB: $renamedOutputNames")
+        assertTrue(
+            renamedOutputNames.all { it.contains("-v1.2.4") },
+            "All outputs should carry the final version 1.2.4: $renamedOutputNames"
+        )
+    }
+
+    // ─── Outputs are generated with the versioned name (no renaming) ──────
+
+    @Test
+    fun `APK and AAB are generated with the versioned name without renaming`() {
+        seedVersion(major = 1, minor = 2, patch = 3, build = 0)
+
+        val result = gradleRunner("assembleDebug", "bundleDebug").build()
+
+        assertTrue(!result.output.contains("(renamed)"), "Outputs should be named by AGP, not renamed:\n${result.output}")
+        assertTrue(File(projectDir, "build/outputs/apk/debug/test-android-app-debug-v1.2.3.1.apk").isFile)
+        assertTrue(File(projectDir, "build/outputs/bundle/debug/test-android-app-debug-v1.2.3.1.aab").isFile)
+    }
+
+    @Test
+    fun `flavored APK and AAB are generated with the versioned name without renaming`() {
+        writeBuildFileWithFlavors()
+        seedVersion(major = 1, minor = 2, patch = 3, build = 0)
+
+        val result = gradleRunner("assembleFreeDebug", "bundlePaidDebug").build()
+
+        assertTrue(!result.output.contains("(renamed)"), "Outputs should be named by AGP, not renamed:\n${result.output}")
+        assertTrue(File(projectDir, "build/outputs/apk/free/debug/test-android-app-free-debug-v1.2.3.1.apk").isFile)
+        assertTrue(File(projectDir, "build/outputs/bundle/paidDebug/test-android-app-paid-debug-v1.2.3.1.aab").isFile)
+    }
+
+    @Test
+    fun `version embedded in the APK matches the version in its file name`() {
+        seedVersion(major = 1, minor = 2, patch = 3, build = 0)
+
+        gradleRunner("assembleDebug").build()
+
+        val outputMetadata = File(projectDir, "build/outputs/apk/debug/output-metadata.json").readText()
+        assertTrue(outputMetadata.contains("\"versionName\": \"1.2.3.1\""), "Embedded versionName should be 1.2.3.1:\n$outputMetadata")
+        assertTrue(outputMetadata.contains("\"versionCode\": 1002003001"), "Embedded versionCode should be 1002003001:\n$outputMetadata")
+        assertTrue(outputMetadata.contains("test-android-app-debug-v1.2.3.1.apk"), "Metadata should point at the versioned APK:\n$outputMetadata")
+    }
+
+    @Test
+    fun `old output files from previous builds are never renamed`() {
+        seedVersion(major = 1, minor = 2, patch = 3, build = 0)
+
+        val apkDir = File(projectDir, "build/outputs/apk/debug")
+        apkDir.mkdirs()
+        val oldApk = File(apkDir, "some-old-build.apk")
+        oldApk.writeText("old")
+        oldApk.setLastModified(System.currentTimeMillis() - 24 * 60 * 60 * 1000)
+
+        gradleRunner("assembleDebug").build()
+
+        val versionedFromOldContent = apkDir.listFiles { file -> file.extension == "apk" && file.name.contains("-v") }
+            ?.filter { it.readBytes().contentEquals("old".toByteArray()) }
+        assertTrue(versionedFromOldContent.isNullOrEmpty(), "Old APK must not be renamed: ${apkDir.listFiles()?.map { it.name }}")
+        assertTrue(File(apkDir, "test-android-app-debug-v1.2.3.1.apk").isFile)
+    }
+
+    @Test
+    fun `mixed debug and release build embeds the four-part version in debug variants`() {
+        writeBuildFileWithFlavors()
+        seedVersion(major = 1, minor = 2, patch = 3, build = 5)
+
+        gradleRunner("assembleFreeDebug", "bundlePaidRelease").build()
+
+        val debugApkDir = File(projectDir, "build/outputs/apk/free/debug")
+        val outputMetadata = File(debugApkDir, "output-metadata.json").readText()
+        assertTrue(outputMetadata.contains("\"versionName\": \"1.2.4.0\""), "Debug variant should embed 1.2.4.0:\n$outputMetadata")
+        assertTrue(File(debugApkDir, "test-android-app-free-debug-v1.2.4.0.apk").isFile)
+        assertTrue(File(projectDir, "build/outputs/bundle/paidRelease/test-android-app-paid-release-v1.2.4.aab").isFile)
     }
 }

@@ -88,4 +88,30 @@ class VersionFrauExtensionTest {
         // Format is "MMM dd, yyyy" — verify it matches the pattern
         assertTrue(buildTime.matches(Regex("[A-Z][a-z]{2} \\d{2}, \\d{4}")))
     }
+
+    @Test
+    fun `planned build increment is reflected in versionName and stays stable after the increment runs`() {
+        extension.writeVersion(VersionData(1, 2, 3, 7))
+        extension.isDebugBuild = true
+        extension.plannedIncrement = PlannedIncrement.BUILD
+
+        assertEquals("1.2.3.8", extension.versionName)
+        assertEquals(1_002_003_008, extension.versionCode)
+
+        // incrementBuildVersion writes the new value — the target must not be incremented twice.
+        extension.writeVersion(VersionData(1, 2, 3, 8))
+        assertEquals("1.2.3.8", extension.versionName)
+        assertEquals("v1.2.3.8", extension.outputVersionSuffix(isDebugVariant = true))
+    }
+
+    @Test
+    fun `planned patch increment resets build in versionName and output suffix`() {
+        extension.writeVersion(VersionData(1, 2, 3, 7))
+        extension.isDebugBuild = false
+        extension.plannedIncrement = PlannedIncrement.PATCH
+
+        assertEquals("1.2.4", extension.versionName)
+        assertEquals(1_002_004_000, extension.versionCode)
+        assertEquals("v1.2.4", extension.outputVersionSuffix(isDebugVariant = false))
+    }
 }

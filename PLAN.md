@@ -1,6 +1,64 @@
 # Plan
 
-## Current prompt (2026-07-19)
+## Current prompt (2026-09-30, follow-up 3)
+
+> fix it yourself, also use libs.version  (re: "Dependency 'com.android.tools.build:gradle:8.2.0' is declared multiple times")
+
+### Status: done
+
+- Added `gradle/libs.versions.toml` (agp, kotlin, junit-jupiter, junit-platform); `build.gradle.kts`
+  uses `libs.*` / `alias(libs.plugins.kotlin.jvm)`. AGP declared once (`compileOnly`).
+- `AndroidFunctionalTest` reads the AGP version from system property `versionfrau.agpVersion`,
+  set by the test task from `libs.versions.agp`.
+- `sample/` imports the catalog and uses `libs.android.gradle.plugin`; sample `assembleDebug` builds.
+- 37 tests passing; no duplicate-declaration warning.
+
+## Previous prompt (2026-09-30, follow-up 2)
+
+> use the 4-part version name for debug in mixed builds too
+
+### Status: done
+
+- Extension: added `versionNameFor` / `versionCodeFor(isDebugVariant)`; `versionName`, `versionCode`,
+  `outputVersionSuffix` delegate to them.
+- `AndroidIntegration.alignEmbeddedVersionWithBuildType` rewrites each variant output's
+  versionName/versionCode (public VariantOutput API) when it came from VersionFrau; keeps suffixes.
+- Added functional test (mixed `assembleFreeDebug bundlePaidRelease` → debug embeds 1.2.4.0);
+  verified on AGP 9.4.1 with aapt2. 37 tests passing.
+
+## Previous prompt (2026-09-30, follow-up)
+
+> it should support both apk and aab, it should not rename old file, it should only rename the
+> newly generated file, ideally the file should be genarated with the intended name, instead of renaming
+
+### Status: done
+
+- `AndroidIntegration.onVariants` names outputs at generation: APK via `VariantOutputImpl.outputFileName`,
+  AAB via `sign<Variant>Bundle.finalBundleFile` (set in `taskGraph.whenReady`, after AGP assigns the
+  default). Both internals reached reflectively; successfully named variants are recorded.
+- `VersionFrauPlugin` renaming is now a fallback only for unnamed variants and only for files modified
+  during the current build.
+- Extension computes the target version (disk + planned increment from requested tasks, snapshotted),
+  so embedded versionName/versionCode == file name == version.properties after the build.
+- Verified on AGP 9.4.1 scratch project (no flavors / 2 dimensions, APK + AAB, no renames) and
+  AGP 8.2.0 test suite. 36 tests passing. Updated CHANGELOG.md and README.md.
+
+## Previous prompt (2026-09-30)
+
+> the plugin should work when we have flavors and when we dont
+
+### Status: done
+
+- Toolchain: Kotlin plugin 1.9.22 → 2.4.20 and added `junit-platform-launcher` so the project
+  compiles/tests on the (user-upgraded) Gradle 9.7.1 wrapper.
+- Aggregate-task detection (`assembleDebug` on a flavored project) now uses task names instead of
+  directory existence → stale outputs from an un-flavored build are no longer renamed.
+- Lifecycle tasks `mustRunAfter` both increment tasks → consistent version across all variants in
+  mixed debug + release invocations.
+- Verified with AGP 9.4.1 in a scratch project: no flavors, 2 flavor dimensions, switching both ways.
+- Added 4 functional tests (30 total, all passing). Updated CHANGELOG.md and README.md.
+
+## Previous prompt (2026-07-19)
 
 > it's not working when user is using productFlavors, fix all the issues
 

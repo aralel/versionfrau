@@ -19,6 +19,7 @@ class VersionFrauPlugin : Plugin<Project> {
         // build script reads versionFrau.versionName / versionFrau.versionCode
         // inside android { defaultConfig { } } during configuration.
         extension.isDebugBuild = resolveIsDebugBuild(project)
+        extension.plannedIncrement = resolvePlannedIncrement(project)
 
         // Register increment tasks eagerly so they are available for dependency wiring.
         val incrementTasks = registerIncrementTasks(project, extension)
@@ -27,12 +28,37 @@ class VersionFrauPlugin : Plugin<Project> {
         // Uses the stable AGP Variant API (finalizeDsl + onVariants) to enable
         // buildConfig and inject the field into every variant.
         project.pluginManager.withPlugin("com.android.application") {
-            AndroidIntegration.configure(project)
+            AndroidIntegration.configure(project, extension, variantsNamedAtGeneration)
         }
 
         project.afterEvaluate {
             // Wire task dependencies using task names — no AGP class references needed.
             wireTaskDependencies(project, extension, incrementTasks.first, incrementTasks.second)
+        }
+    }
+
+    /**
+     * Names of variants whose APK / AAB outputs AGP generates directly with the versioned file
+     * name (see [AndroidIntegration]). Only variants missing from this set fall back to renaming.
+     */
+    private val variantsNamedAtGeneration: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** Files modified before this moment belong to earlier builds and are never renamed. */
+    private val buildStartTimeMillis = System.currentTimeMillis()
+
+    /**
+     * Predicts which increment the requested lifecycle tasks will run. A release task wins over a
+     * debug task because incrementPatchVersion runs last and resets the build number.
+     */
+    private fun resolvePlannedIncrement(project: Project): PlannedIncrement {
+        val requestedBuildTypes = project.gradle.startParameter.taskNames
+            .mapNotNull { requestedTaskName ->
+                lifecycleTaskPattern.matchEntire(requestedTaskName.substringAfterLast(':'))?.groupValues?.get(3)
+            }
+        return when {
+            "Release" in requestedBuildTypes -> PlannedIncrement.PATCH
+            "Debug" in requestedBuildTypes -> PlannedIncrement.BUILD
+            else -> PlannedIncrement.NONE
         }
     }
 
@@ -124,7 +150,10 @@ class VersionFrauPlugin : Plugin<Project> {
                 val incrementTask = if (isDebugVariant) incrementBuildTask else incrementPatchTask
 
                 task.dependsOn(incrementTask)
-                task.mustRunAfter(incrementTask)
+                // Order after BOTH increment tasks: when debug and release variants are built
+                // in one invocation, every variant must be renamed with the same final version
+                // instead of whichever increments happened to have run so far.
+                task.mustRunAfter(incrementBuildTask, incrementPatchTask)
                 configureOutputRenaming(
                     project = project,
                     extension = extension,
@@ -142,22 +171,19 @@ class VersionFrauPlugin : Plugin<Project> {
     }
 
     /**
-     * Adds a doLast action that renames the APK / AAB output files of ONE variant with the
-     * version suffix. The variant is identified by the flavor + build type parsed from the
-     * task name, so every flavor's outputs are renamed independently:
+     * FALLBACK ONLY. Normally [AndroidIntegration] makes AGP write the APK / AAB with the versioned
+     * name directly, so nothing is renamed. If that was not possible for this variant (an AGP
+     * version whose internals differ), this doLast renames the outputs instead — but only files
+     * produced by the current build; older files in the output directory are never touched.
      *
+     * Variant output directories:
      * - assembleDebug (no flavors)  → build/outputs/apk/debug/
      * - assembleFreeDebug           → build/outputs/apk/free/debug/
      * - bundleRelease (no flavors)  → build/outputs/bundle/release/
      * - bundleFreeRelease           → build/outputs/bundle/freeRelease/
      *
-     * Aggregate tasks on flavored projects (e.g. assembleDebug when flavors exist) have no
-     * output directory of their own — they skip silently while the per-flavor tasks each
-     * rename their own outputs. All fresh output files in the variant directory are renamed
-     * (ABI splits produce several APKs); files already carrying a version suffix from a
-     * previous build are left untouched.
-     *
-     * No AGP class references — works purely on file conventions.
+     * Aggregate tasks on flavored projects (e.g. assembleDebug when flavors exist) skip — the
+     * per-flavor tasks handle their own outputs.
      */
     private fun configureOutputRenaming(
         project: Project,
@@ -168,18 +194,25 @@ class VersionFrauPlugin : Plugin<Project> {
         isDebugVariant: Boolean
     ) {
         val buildTypeName = if (isDebugVariant) "debug" else "release"
+        val outputExtension = if (isAssemble) "apk" else "aab"
+        val variantName = if (flavorName.isEmpty()) {
+            buildTypeName
+        } else {
+            flavorName + buildTypeName.replaceFirstChar { it.uppercase() }
+        }
 
         task.doLast {
-            val freshVersion = extension.readVersion()
-            val versionSuffix = if (isDebugVariant) {
-                "v${freshVersion.major}.${freshVersion.minor}.${freshVersion.patch}.${freshVersion.build}"
-            } else {
-                "v${freshVersion.major}.${freshVersion.minor}.${freshVersion.patch}"
+            if (AndroidIntegration.namedAtGenerationKey(outputExtension, variantName) in variantsNamedAtGeneration) {
+                // AGP already generated the file with the versioned name.
+                return@doLast
             }
 
-            val outputExtension = if (isAssemble) "apk" else "aab"
+            if (flavorName.isEmpty() && hasFlavoredVariantTasks(project, isAssemble, isDebugVariant)) {
+                // Aggregate task on a flavored project — per-flavor tasks handle their own outputs.
+                return@doLast
+            }
+
             val variantOutputDir = if (isAssemble) {
-                // APK: build/outputs/apk/<buildType>/ or build/outputs/apk/<flavor>/<buildType>/
                 val apkRelativePath = if (flavorName.isEmpty()) {
                     "outputs/apk/$buildTypeName"
                 } else {
@@ -187,36 +220,43 @@ class VersionFrauPlugin : Plugin<Project> {
                 }
                 project.layout.buildDirectory.dir(apkRelativePath).get().asFile
             } else {
-                // AAB: build/outputs/bundle/<variantName>/ where variantName is the
-                // camelCase flavor + build type combination (e.g. "freeRelease").
-                val variantDirName = if (flavorName.isEmpty()) {
-                    buildTypeName
-                } else {
-                    flavorName + buildTypeName.replaceFirstChar { it.uppercase() }
-                }
-                project.layout.buildDirectory.dir("outputs/bundle/$variantDirName").get().asFile
+                project.layout.buildDirectory.dir("outputs/bundle/$variantName").get().asFile
             }
-
             if (!variantOutputDir.isDirectory) {
-                // Aggregate task on a flavored project — per-flavor tasks handle renaming.
                 return@doLast
             }
 
+            val versionSuffix = extension.outputVersionSuffix(isDebugVariant)
             variantOutputDir.walkTopDown()
                 .filter { it.isFile && it.extension == outputExtension }
+                .filter { it.lastModified() >= buildStartTimeMillis }
                 .filterNot { versionedFileNamePattern.matches(it.nameWithoutExtension) }
-                .forEach { originalFile ->
+                .forEach { generatedFile ->
                     val renamedFile = File(
-                        originalFile.parentFile,
-                        "${originalFile.nameWithoutExtension}-${versionSuffix}.${outputExtension}"
+                        generatedFile.parentFile,
+                        "${generatedFile.nameWithoutExtension}-${versionSuffix}.${outputExtension}"
                     )
                     if (renamedFile.exists()) renamedFile.delete()
-                    if (originalFile.renameTo(renamedFile)) {
-                        project.logger.lifecycle("VersionFrau: ${outputExtension.uppercase()} → ${renamedFile.name}")
+                    if (generatedFile.renameTo(renamedFile)) {
+                        project.logger.lifecycle("VersionFrau: ${outputExtension.uppercase()} → ${renamedFile.name} (renamed)")
                     } else {
-                        project.logger.warn("VersionFrau: could not rename ${originalFile.name} in ${variantOutputDir.absolutePath}")
+                        project.logger.warn("VersionFrau: could not rename ${generatedFile.name} in ${variantOutputDir.absolutePath}")
                     }
                 }
+        }
+    }
+
+    /**
+     * True when the project defines product flavors, detected by the presence of a flavored
+     * lifecycle task for the same prefix and build type (e.g. assembleFreeDebug for assembleDebug).
+     */
+    private fun hasFlavoredVariantTasks(project: Project, isAssemble: Boolean, isDebugVariant: Boolean): Boolean {
+        val expectedTaskPrefix = if (isAssemble) "assemble" else "bundle"
+        val expectedBuildTypePart = if (isDebugVariant) "Debug" else "Release"
+        return project.tasks.names.any { taskName ->
+            val lifecycleMatch = lifecycleTaskPattern.matchEntire(taskName) ?: return@any false
+            val (taskPrefix, flavorPart, buildTypePart) = lifecycleMatch.destructured
+            taskPrefix == expectedTaskPrefix && buildTypePart == expectedBuildTypePart && flavorPart.isNotEmpty()
         }
     }
 

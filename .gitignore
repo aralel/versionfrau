@@ -22,3 +22,4 @@ version.properties
 
 # OS
 Thumbs.db
+.kotlin/

@@ -1,7 +1,7 @@
 plugins {
     `java-gradle-plugin`
     `maven-publish`
-    kotlin("jvm") version "1.9.22"
+    alias(libs.plugins.kotlin.jvm)
 }
 
 group = "com.github.aralel"
@@ -14,16 +14,18 @@ repositories {
 
 dependencies {
     implementation(gradleApi())
-    compileOnly("com.android.tools.build:gradle:8.2.0")
-    testImplementation("com.android.tools.build:gradle:8.2.0")
+    compileOnly(libs.android.gradle.plugin)
     testImplementation(gradleTestKit())
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Android functional tests build a real app with the same AGP version the plugin compiles against.
+    systemProperty("versionfrau.agpVersion", libs.versions.agp.get())
 }
 
 gradlePlugin {

@@ -2,7 +2,28 @@
 
 ## [Unreleased]
 
+### Build
+- Added a Gradle version catalog (`gradle/libs.versions.toml`) — AGP, Kotlin and JUnit versions are now declared once and referenced as `libs.*` in `build.gradle.kts`
+- Removed the duplicate `com.android.tools.build:gradle` declaration ("declared multiple times"): AGP is only `compileOnly`; the Android functional tests get their AGP from the generated test project's `buildscript`, whose version is now passed in from the catalog (`versionfrau.agpVersion` system property) instead of being hardcoded
+- `sample/` imports the same catalog (`../gradle/libs.versions.toml`) and uses `libs.android.gradle.plugin`
+
+### Changed
+- **APK and AAB files are now generated with the versioned name instead of being renamed** — `AndroidIntegration` sets AGP's per-output `outputFileName` (APK, incl. every ABI/density split) and the `sign<Variant>Bundle` task's `finalBundleFile` (AAB) to e.g. `app-free-debug-v1.2.3.4.apk` / `app-free-release-v1.2.4.aab`. AGP's `output-metadata.json` points at the versioned file, and old files in the output directories are never touched. Works with and without product flavors; verified on AGP 8.2.0 and 9.4.1
+- Output renaming in `VersionFrauPlugin` is now only a fallback for variants AGP could not name directly (the two AGP internals above are accessed reflectively), and it only renames files modified during the current build — never older files
+- `versionName`, `versionCode` and `fullVersionName` now return the version the current build produces (the version on disk plus the planned increment, predicted from the requested tasks), snapshotted so reading them after the increment task ran does not double-count. `major` / `minor` / `patch` / `build` still return the raw values on disk
+
 ### Fixed
+- **Debug variants embedded the release-style version in mixed builds** — with `assembleDebug bundleRelease` in one invocation, `versionFrau.versionName` resolves to the release form (`1.0.4`), and since `defaultConfig` holds one value for all variants, debug APKs embedded `1.0.4` instead of `1.0.4.0`. `AndroidIntegration` now rewrites each variant output's `versionName` / `versionCode` (public `VariantOutput` API) to its own build type's form, keeping any `versionNameSuffix` and leaving values not set from VersionFrau untouched. Debug file names and embedded versions now both use the four-part form
+- **Version inside the APK/AAB was one behind the file name** — `versionName`/`versionCode` were read at configuration time, before `incrementBuildVersion` / `incrementPatchVersion` ran, so e.g. `app-debug-v1.0.2.1.apk` contained `versionName=1.0.2.0`. Both now carry the same version
+- **Flavored projects renamed stale un-flavored outputs** — aggregate tasks (`assembleDebug` / `bundleRelease`) detected "flavored project" by the absence of `outputs/apk/debug/`; a leftover dir from a build made before flavors were added made them rename old files. Flavors are now detected from the task graph (a flavored lifecycle task like `assembleFreeDebug` exists), so the same plugin setup behaves correctly with and without flavors, and when switching between the two
+- **Mixed debug + release builds renamed flavors with different versions** — e.g. `assembleDebug bundleFreeRelease` ran `incrementPatchVersion` mid-build, so some flavor APKs got `v1.0.0.2` and others `v1.0.1.0`. Every lifecycle task now runs after both increment tasks, so all outputs carry the same final version
+- **Build broken on Gradle 9.7.1** — Kotlin 1.9.22 cannot read Gradle 9's Kotlin 2.4 stdlib metadata; bumped the Kotlin JVM plugin to 2.4.20 and added the `junit-platform-launcher` test runtime dependency Gradle 9 requires
+
+### Added
+- Functional tests: AAB renaming with and without flavors, stale un-flavored outputs left untouched after adding flavors, and consistent versions across all variants in a mixed debug + release build
+- Functional tests: APK and AAB generated with the versioned name (no renaming) with and without flavors, embedded `versionName`/`versionCode` matching the file name (via `output-metadata.json`), and old output files never renamed; unit tests for the planned-increment target version
+- Verified manually against AGP 9.4.1 (plugins DSL, Kotlin DSL, two flavor dimensions) in addition to the AGP 8.2.0 test suite
+
 - **Product flavors: only one APK/AAB was renamed per build** — output renaming previously picked the single most-recently-modified file under `outputs/`, so with flavors (e.g. `assembleDebug` building `free` + `paid`) only one flavor's APK got renamed, chosen by timestamp. Renaming is now scoped per variant: each lifecycle task (`assembleFreeDebug`, `bundleFreeRelease`, …) renames all fresh outputs in its own variant directory (`outputs/apk/<flavor>/<buildType>/`, `outputs/bundle/<flavorBuildType>/`)
 - **Product flavors: renamed files lost the flavor name** — the new name was always `{project}-{buildType}-v…`; renaming now keeps AGP's original base name (e.g. `app-free-debug` → `app-free-debug-v1.2.3.4.apk`), which also keeps ABI-split APKs distinct
 - **Product flavors: rename action ran multiple times per build** — both the aggregate task (`assembleDebug`) and every per-flavor task matched, each re-renaming the same "last modified" file. Aggregate tasks on flavored projects now skip silently (no variant dir of their own) while per-flavor tasks handle their own outputs

@@ -70,21 +70,34 @@ build=0
 | `./gradlew assembleRelease` | `patch` incremented, `build` reset to 0 | `app-release-v1.0.4.apk` |
 | `./gradlew bundleRelease` | `patch` incremented, `build` reset to 0 | `app-release-v1.0.4.aab` |
 
-The output file is renamed automatically — no extra tasks or wiring needed.
+APKs and AABs are **generated with the versioned name** — AGP writes the file under its final
+name directly, so nothing is renamed afterwards and older files in the output directory are never
+touched. The version inside the APK/AAB (`versionName` / `versionCode`) is the same version that
+appears in the file name. No extra tasks or wiring needed.
+
+> If a future AGP version changes the internals used for naming, VersionFrau falls back to
+> renaming — and then only renames files produced by the current build.
 
 ### Product flavors
 
-Flavored builds are fully supported. Each variant's outputs are renamed independently,
+Flavored builds are fully supported. Each variant's outputs are named independently,
 keeping the flavor in the filename:
 
-| Command | Renamed outputs |
+| Command | Generated outputs |
 |---|---|
 | `./gradlew assembleFreeDebug` | `app-free-debug-v1.0.3.42.apk` |
 | `./gradlew assembleDebug` (all flavors) | `app-free-debug-v1.0.3.42.apk`, `app-paid-debug-v1.0.3.42.apk` |
 | `./gradlew bundleFreeRelease` | `app-free-release-v1.0.4.aab` |
 
 The version is incremented **once per build**, no matter how many flavors are assembled.
-ABI-split APKs are all renamed and keep their distinguishing names.
+ABI-split APKs all get the version suffix and keep their distinguishing names.
+
+Projects **with and without** flavors work with the same setup — nothing to configure.
+Multiple flavor dimensions (e.g. `freeProd`) are supported, and adding or removing
+flavors later is safe: leftover outputs from the previous layout are never touched.
+When debug and release variants are built in one invocation, all increments run first,
+so every output carries the same final version; debug variants still embed and are named with
+the four-part version (e.g. `1.0.4.0`), release variants with the three-part one (`1.0.4`).
 
 ## Extension Properties
 
@@ -99,8 +112,12 @@ ABI-split APKs are all renamed and keep their distinguishing names.
 | `versionFrau.fullVersionName` | `String` | `"1.0.3.42"` | `"1.0.3.42"` | Always includes build |
 | `versionFrau.buildTime` | `String` | `"Mar 19, 2026"` | `"Mar 19, 2026"` | Current build timestamp |
 
-> **Note:** `versionName` and `versionCode` are build-type-aware and are resolved at
-> configuration time by inspecting the Gradle start parameters — no extra code needed.
+> **Note:** `versionName`, `versionCode` and `fullVersionName` are build-type-aware and are
+> resolved at configuration time by inspecting the Gradle start parameters — no extra code needed.
+> They already include the increment the build is about to perform (e.g. `assembleDebug` with
+> `build=41` on disk yields `1.0.3.42`), so the app's embedded version matches the file name and
+> `version.properties` after the build. `major` / `minor` / `patch` / `build` return the raw values
+> currently on disk.
 
 ### BUILD_TIME
 

@@ -25,6 +25,16 @@ open class VersionFrauExtension(private val project: Project) {
      */
     internal var isDebugBuild: Boolean = false
 
+    /**
+     * Set by the plugin at apply-time: the increment this invocation's requested tasks will
+     * perform. [versionName], [versionCode] and output file names use the version AFTER this
+     * increment, so the APK/AAB contents and file name match the version written to disk.
+     */
+    internal var plannedIncrement: PlannedIncrement = PlannedIncrement.NONE
+
+    /** First computed target version — stays stable after the increment task has run. */
+    private var targetVersionSnapshot: VersionData? = null
+
     val major: Int get() = readVersion().major
     val minor: Int get() = readVersion().minor
     val patch: Int get() = readVersion().patch
@@ -35,14 +45,7 @@ open class VersionFrauExtension(private val project: Project) {
      * - Debug:   "major.minor.patch.build"  (e.g. "1.0.3.42")
      * - Release: "major.minor.patch"         (e.g. "1.0.3")
      */
-    val versionName: String get() {
-        val version = readVersion()
-        return if (isDebugBuild) {
-            "${version.major}.${version.minor}.${version.patch}.${version.build}"
-        } else {
-            "${version.major}.${version.minor}.${version.patch}"
-        }
-    }
+    val versionName: String get() = versionNameFor(isDebugVariant = isDebugBuild)
 
     /**
      * Returns the version code for the current build type:
@@ -51,19 +54,49 @@ open class VersionFrauExtension(private val project: Project) {
      *
      * The release code always ends in 000, leaving room for up to 999 debug builds per patch.
      */
-    val versionCode: Int get() {
-        val version = readVersion()
-        return if (isDebugBuild) {
+    val versionCode: Int get() = versionCodeFor(isDebugVariant = isDebugBuild)
+
+    /** Always returns "major.minor.patch.build" regardless of build type. */
+    val fullVersionName: String get() {
+        val version = targetVersion()
+        return "${version.major}.${version.minor}.${version.patch}.${version.build}"
+    }
+
+    /**
+     * Version name for one variant's build type, independent of [isDebugBuild]. Used to give debug
+     * variants the four-part name even when release variants are built in the same invocation.
+     */
+    internal fun versionNameFor(isDebugVariant: Boolean): String {
+        val version = targetVersion()
+        return if (isDebugVariant) {
+            "${version.major}.${version.minor}.${version.patch}.${version.build}"
+        } else {
+            "${version.major}.${version.minor}.${version.patch}"
+        }
+    }
+
+    /** Version code for one variant's build type, independent of [isDebugBuild]. */
+    internal fun versionCodeFor(isDebugVariant: Boolean): Int {
+        val version = targetVersion()
+        return if (isDebugVariant) {
             version.major * 1_000_000_000 + version.minor * 1_000_000 + version.patch * 1_000 + version.build
         } else {
             version.major * 1_000_000_000 + version.minor * 1_000_000 + version.patch * 1_000
         }
     }
 
-    /** Always returns "major.minor.patch.build" regardless of build type. */
-    val fullVersionName: String get() {
-        val version = readVersion()
-        return "${version.major}.${version.minor}.${version.patch}.${version.build}"
+    /**
+     * Version suffix used in APK / AAB file names, e.g. "v1.0.3.42" (debug) or "v1.0.3" (release).
+     */
+    internal fun outputVersionSuffix(isDebugVariant: Boolean): String = "v${versionNameFor(isDebugVariant)}"
+
+    /**
+     * The version this build produces: the version file plus [plannedIncrement]. Snapshotted on
+     * first use so reading it after the increment task ran does not apply the increment twice.
+     */
+    internal fun targetVersion(): VersionData {
+        if (plannedIncrement == PlannedIncrement.NONE) return readVersion()
+        return targetVersionSnapshot ?: plannedIncrement.applyTo(readVersion()).also { targetVersionSnapshot = it }
     }
 
     internal fun readVersion(): VersionData {
@@ -100,3 +133,16 @@ data class VersionData(
     val patch: Int,
     val build: Int
 )
+
+/** The version increment a Gradle invocation will perform, resolved from the requested task names. */
+internal enum class PlannedIncrement {
+    NONE,
+    BUILD,
+    PATCH;
+
+    fun applyTo(currentVersion: VersionData): VersionData = when (this) {
+        NONE -> currentVersion
+        BUILD -> currentVersion.copy(build = currentVersion.build + 1)
+        PATCH -> currentVersion.copy(patch = currentVersion.patch + 1, build = 0)
+    }
+}
