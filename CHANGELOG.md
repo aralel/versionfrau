@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Publishing
+- Added `scripts/publish.sh`: picks the GPG key, uploads its public key to keyserver.ubuntu.com, exports the private key in Gradle's single-line form (no header/footer/checksum) with the matching 8-character key id, writes the signing and Central token properties to `~/.gradle/gradle.properties` (backup in `gradle.properties.bak`, `chmod 600`), verifies every artifact gets a `.asc` via `publishToMavenLocal`, then uploads (`--release` auto-releases, `--local-only` skips the upload, `--key <ID>` selects a key)
+- Added Maven Central publishing via `com.vanniktech.maven.publish` (version in the catalog): sources + javadoc jars, full POM (name, description, license, developer, SCM) and GPG signing
+- Group changed from `com.github.aralel` to `com.aralel` (matches the plugin id; requires the `com.aralel` namespace to be verified on the Sonatype Central Portal). JitPack still serves `com.github.aralel`
+- Added the missing `LICENSE` file (MIT, Aralel GmbH), which Maven Central requires
+- Removed the manual `maven-publish` publication block; the plugin creates the publication
+- Fixed `The value for this property is final and cannot be changed any further` on `publishToMavenCentral`: Maven Central target and signing are now enabled only through `gradle.properties` (`mavenCentralPublishing=true`, `signAllPublications=true`); the duplicate `publishToMavenCentral()` / `signAllPublications()` calls were removed from `build.gradle.kts`. Signing is therefore always on — every publish, including `publishToMavenLocal`, needs the GPG credentials
+
 ### Build
 - Added a Gradle version catalog (`gradle/libs.versions.toml`) — AGP, Kotlin and JUnit versions are now declared once and referenced as `libs.*` in `build.gradle.kts`
 - Removed the duplicate `com.android.tools.build:gradle` declaration ("declared multiple times"): AGP is only `compileOnly`; the Android functional tests get their AGP from the generated test project's `buildscript`, whose version is now passed in from the catalog (`versionfrau.agpVersion` system property) instead of being hardcoded

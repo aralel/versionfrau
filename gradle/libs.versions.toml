@@ -3,6 +3,7 @@ agp = "8.2.0"
 kotlin = "2.4.20"
 junit-jupiter = "5.10.2"
 junit-platform = "1.10.2"
+maven-publish = "0.37.0"
 
 [libraries]
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
@@ -13,3 +14,4 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }

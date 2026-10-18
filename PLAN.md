@@ -1,5 +1,39 @@
 # Plan
 
+## Current prompt (2026-10-18)
+
+> "Cannot find key with id '0x6D58632B' in key data" — can you make a bash file that does everything automatically?
+
+### Status: done
+
+- Added `scripts/publish.sh` (bash 3.2 compatible): key selection, public key upload, loopback export of the private key
+  (wrong passphrase → stops), writes signing + Central token properties (backup, chmod 600), `publishToMavenLocal`
+  signature check, then `publishToMavenCentral` / `publishAndReleaseToMavenCentral`.
+- Cause of the error: key data and key id in ~/.gradle/gradle.properties came from different copies; the script derives both from one key.
+- The user's private key (FDD0DD316D58632B) was shared into the chat via an editor selection; recommended rotating it before the first release.
+
+## Current prompt (2026-10-17, follow-up)
+
+> `./gradlew publishToMavenCentral` → build.gradle.kts line 47: "The value for this property is final and cannot be changed any further."
+
+### Status: done (build script); user action needed in ~/.gradle/gradle.properties
+
+- Cause: user added `mavenCentralPublishing=true` / `signAllPublications=true` to project gradle.properties, so the
+  Vanniktech plugin configured them already; the explicit calls in `mavenPublishing {}` set them a second time. Removed the calls.
+- Remaining (user's file): `signingInMemoryKeyId` has an inline `# ...` comment (not supported in .properties) and
+  `signingInMemoryKey` still ends with the armor checksum `=XXXX`. With both corrected on the command line,
+  `publishToMavenLocal` signs every artifact of 0.0.18.
+
+## Current prompt (2026-10-17)
+
+> what should i do with build.gradle.kts, also what should i put in component description and other publishing fields to get it approved
+
+### Status: done
+
+- `build.gradle.kts`: Vanniktech publish plugin, POM metadata, conditional signing, group `com.aralel`; added `LICENSE`.
+- Verified `publishToMavenLocal` produces jar, sources, javadoc, module, pom and `.asc` for each, plus the plugin marker.
+- User's `~/.gradle/gradle.properties` needs `signingInMemoryKeyId=6D58632B` (8 chars) and the key line without the trailing `=XXXX` checksum.
+
 ## Current prompt (2026-09-30, follow-up 3)
 
 > fix it yourself, also use libs.version  (re: "Dependency 'com.android.tools.build:gradle:8.2.0' is declared multiple times")

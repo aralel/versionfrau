@@ -149,6 +149,36 @@ versionFrau {
 }
 ```
 
+## Publishing (maintainers)
+
+The easiest way is the script, which sets up `~/.gradle/gradle.properties` from your GPG key and publishes:
+
+```bash
+scripts/publish.sh --local-only   # set up + verify signatures, no upload
+scripts/publish.sh                # upload; release in the Central Portal
+scripts/publish.sh --release      # upload and release automatically
+```
+
+Manual setup:
+
+Credentials live in `~/.gradle/gradle.properties` (never in the repo):
+
+```properties
+mavenCentralUsername=<Central Portal token username>
+mavenCentralPassword=<Central Portal token password>
+signingInMemoryKeyId=<last 8 characters of the GPG key id>
+signingInMemoryKey=<armored private key on ONE line, without -----BEGIN/END----- lines and without the trailing =XXXX checksum>
+signingInMemoryKeyPassword=<GPG passphrase>
+```
+
+`.properties` files have no end-of-line comments: put comments on their own line, or they become part of the value.
+Publishing to Maven Central and signing are switched on in the project's `gradle.properties` (`mavenCentralPublishing=true`, `signAllPublications=true`).
+
+```bash
+./gradlew publishToMavenLocal          # dry run: check the .asc signatures in ~/.m2
+./gradlew publishToMavenCentral        # upload; then release the deployment in the Central Portal
+```
+
 ## License
 
 MIT
