@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Docs
+- README and website: JitPack removed. The plugin is installed from Maven Central (`com.aralel:versionfrau` 0.0.18 + plugin marker); setup only needs `mavenCentral()` in `pluginManagement.repositories`, no `resolutionStrategy`
+- Website added in `docs/` (GitHub Pages, `https://versionfrau.aralel.com`, with `CNAME` and `.nojekyll`); the README links to it
 - README: Xcode link now points to the real repository `aralel/versionfrau-ios` (was `aralel/versionfrau-xcode`)
 - README: plugin version in the setup example is `0.0.18` (the `1.0.0` shown before was never released)
 - README: `version.properties` is created in the module folder (usually `app/version.properties`), not the project root

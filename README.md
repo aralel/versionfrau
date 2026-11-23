@@ -1,6 +1,6 @@
 # VersionFrau
 
-**Website & AI setup instructions:** https://versionfrau.codehospital.com ([llms-full.txt](https://versionfrau.codehospital.com/llms-full.txt))
+**Website & AI setup instructions:** https://versionfrau.aralel.com ([llms-full.txt](https://versionfrau.aralel.com/llms-full.txt))
 
 A Gradle plugin that automatically manages version numbers for your Android (or JVM) project using a `version.properties` file.
 
@@ -13,24 +13,17 @@ A Gradle plugin that automatically manages version numbers for your Android (or 
 
 ## Setup
 
-### 1. Add JitPack repository
+### 1. Make sure Maven Central is a plugin repository
 
-In your root `settings.gradle.kts`:
+VersionFrau is published on [Maven Central](https://central.sonatype.com/artifact/com.aralel/versionfrau) (`com.aralel:versionfrau`).
+New Android Studio projects already have this. In your root `settings.gradle.kts`:
 
 ```kotlin
 pluginManagement {
     repositories {
-        maven { url = uri("https://jitpack.io") }
-        gradlePluginPortal()
         google()
         mavenCentral()
-    }
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id == "com.aralel.versionfrau") {
-                useModule("com.github.aralel:versionfrau:${requested.version}")
-            }
-        }
+        gradlePluginPortal()
     }
 }
 ```

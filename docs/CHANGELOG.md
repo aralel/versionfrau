@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed — 2026-11-23 (Maven Central)
+- Android setup uses Maven Central instead of JitPack (`index.html`, `llms.txt`, `llms-full.txt`, troubleshooting); `resolutionStrategy` block removed
+
+### Changed — 2026-11-23 (move)
+- Site moved to `versionfrau-android/docs/` (GitHub Pages from `/docs` of `aralel/versionfrau`); domain is now `https://versionfrau.aralel.com/` again (replaces versionfrau.codehospital.com)
+- Added `CNAME` (`versionfrau.aralel.com`) and `.nojekyll`; DEPLOYMENT.md describes Pages from `/docs`
+
 ### Changed — 2026-11-23
 - Domain is now `https://versionfrau.codehospital.com/` (canonical, Open Graph, llms files, robots, sitemap, README, DEPLOYMENT)
 - Both plugin READMEs link to the website; Android README issues (wrong Xcode repo, version `1.0.0`, file location, versionCode examples) fixed in that repo

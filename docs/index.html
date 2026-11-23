@@ -6,14 +6,14 @@
 <title>VersionFrau — automatic version numbers for Android (Gradle) and Xcode</title>
 <meta name="description" content="VersionFrau is a free, open-source (MIT) pair of tools that manage app version numbers automatically: a Gradle plugin for Android and a Swift package / CLI for Xcode (iOS, macOS, watchOS, tvOS, visionOS). Debug builds increment the build number, release builds increment the patch version.">
 <meta name="keywords" content="android version code, gradle plugin, auto increment version, versionCode, versionName, xcode build number, CFBundleVersion, CFBundleShortVersionString, MARKETING_VERSION, CURRENT_PROJECT_VERSION, ios versioning, swift package plugin, apk file name version, aab version">
-<link rel="canonical" href="https://versionfrau.codehospital.com/">
+<link rel="canonical" href="https://versionfrau.aralel.com/">
 <link rel="alternate" type="text/plain" title="LLM summary" href="llms.txt">
 <link rel="alternate" type="text/plain" title="LLM full instructions" href="llms-full.txt">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EvF%3C/text%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:title" content="VersionFrau — automatic version numbers for Android and Xcode">
 <meta property="og:description" content="Debug build → build+1. Release build → patch+1. One version.properties file. Gradle plugin for Android, Swift package and CLI for Xcode.">
-<meta property="og:url" content="https://versionfrau.codehospital.com/">
+<meta property="og:url" content="https://versionfrau.aralel.com/">
 <meta name="twitter:card" content="summary">
 
 <script type="application/ld+json">
@@ -219,7 +219,7 @@ footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: 
       <div class="ai-box">
         <h2>Using an AI coding assistant?</h2>
         <p style="margin:0">Give it this page or the plain-text file and say “add VersionFrau to this project”. Paste this prompt:</p>
-<pre><button class="copy" type="button">Copy</button><code>Read https://versionfrau.codehospital.com/llms-full.txt and set up VersionFrau automatic versioning in this project. Detect whether it is an Android/Gradle project or an Xcode project and follow the matching instructions exactly. Do not invent other version numbers or plugin ids.</code></pre>
+<pre><button class="copy" type="button">Copy</button><code>Read https://versionfrau.aralel.com/llms-full.txt and set up VersionFrau automatic versioning in this project. Detect whether it is an Android/Gradle project or an Xcode project and follow the matching instructions exactly. Do not invent other version numbers or plugin ids.</code></pre>
         <p style="margin:0"><strong>Instructions for the assistant:</strong></p>
         <ol>
           <li>Find <code>settings.gradle(.kts)</code> → Android/Gradle → follow <a href="#android">VersionFrau for Android</a>.</li>
@@ -261,23 +261,16 @@ footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: 
   <section id="android">
     <div class="wrap">
       <h2>VersionFrau for Android <span class="tag android">Gradle plugin</span></h2>
-      <p class="sub">Works with the Android Gradle Plugin 8.x and 9.x, Kotlin DSL and Groovy DSL, with or without product flavors. Plugin id <code>com.aralel.versionfrau</code>, served from JitPack as <code>com.github.aralel:versionfrau</code>.</p>
+      <p class="sub">Works with the Android Gradle Plugin 8.x and 9.x, Kotlin DSL and Groovy DSL, with or without product flavors. Plugin id <code>com.aralel.versionfrau</code>, published on <a href="https://central.sonatype.com/artifact/com.aralel/versionfrau">Maven Central</a> as <code>com.aralel:versionfrau</code>.</p>
 
-      <h3>1. Add the JitPack repository</h3>
+      <h3>1. Make sure Maven Central is a plugin repository</h3>
+      <p>New Android Studio projects already have this — then skip to step 2.</p>
       <p class="file">settings.gradle.kts (project root)</p>
 <pre><button class="copy" type="button">Copy</button><code>pluginManagement {
     repositories {
-        maven { url = uri("https://jitpack.io") }
-        gradlePluginPortal()
         google()
         mavenCentral()
-    }
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id == "com.aralel.versionfrau") {
-                useModule("com.github.aralel:versionfrau:${requested.version}")
-            }
-        }
+        gradlePluginPortal()
     }
 }</code></pre>
 

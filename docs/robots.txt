@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://versionfrau.codehospital.com/sitemap.xml
+Sitemap: https://versionfrau.aralel.com/sitemap.xml

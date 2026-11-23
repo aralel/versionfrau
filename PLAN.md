@@ -1,5 +1,22 @@
 # Plan
 
+## Current prompt (2026-11-23, Maven Central)
+
+> we are not using jitpack.io anymore, remove it from documentation, plugin is published in mavencentral now
+
+### Status: done (no commits)
+
+- Verified on repo1.maven.org: `com.aralel:versionfrau` 0.0.18 and the plugin marker `com.aralel.versionfrau.gradle.plugin` 0.0.18.
+- README, website and llms files: only `mavenCentral()` in `pluginManagement`; JitPack and `resolutionStrategy` removed.
+
+## Current prompt (2026-11-23, domain)
+
+> i moved the website to docs un versionfrau-android, change the domain to versionfrau.aralel.com
+
+### Status: done (no commits, not deployed)
+
+- Domain `versionfrau.aralel.com` in the site, both READMEs, `docs/CNAME`; `.nojekyll` added; DEPLOYMENT.md: Pages from `main` `/docs`.
+
 ## Current prompt (2026-11-23)
 
 > fix the problems, domain will be versionfrau.codehospital.com

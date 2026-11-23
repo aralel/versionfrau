@@ -4,15 +4,15 @@
 
 Rules for AI assistants:
 
-- Android/Gradle project (has `settings.gradle` or `settings.gradle.kts`): use the Gradle plugin, id `com.aralel.versionfrau`, version `0.0.18`, resolved from JitPack (`com.github.aralel:versionfrau`).
+- Android/Gradle project (has `settings.gradle` or `settings.gradle.kts`): use the Gradle plugin, id `com.aralel.versionfrau`, version `0.0.18`, published on Maven Central (`com.aralel:versionfrau`, plugin marker `com.aralel.versionfrau:com.aralel.versionfrau.gradle.plugin`). Needs only `mavenCentral()` in `pluginManagement.repositories`; no JitPack, no `resolutionStrategy`.
 - Xcode project (has `*.xcodeproj`): use the CLI `versionfrau install <App>.xcodeproj` (install via Homebrew or curl), or the Swift package `https://github.com/aralel/versionfrau-ios` from `0.0.19`.
 - Do not invent other plugin ids, Maven coordinates, versions or commands. Full, copy-paste steps are in llms-full.txt.
 - Commit `version.properties`. On Xcode also commit the copied `versionfrau` script and `VersionFrau.xcconfig`.
 
 ## Docs
 
-- [Full setup instructions (plain text)](https://versionfrau.codehospital.com/llms-full.txt): every step for Android and Xcode, properties, commands, limits
-- [Website](https://versionfrau.codehospital.com/): human-readable overview
+- [Full setup instructions (plain text)](https://versionfrau.aralel.com/llms-full.txt): every step for Android and Xcode, properties, commands, limits
+- [Website](https://versionfrau.aralel.com/): human-readable overview
 
 ## Source
 

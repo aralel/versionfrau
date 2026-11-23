@@ -14,19 +14,19 @@ No build step, no dependencies, no external fonts/scripts/cookies (GDPR-friendly
 
 ## Using it with an AI assistant
 
-> Read https://versionfrau.codehospital.com/llms-full.txt and set up VersionFrau in this project.
+> Read https://versionfrau.aralel.com/llms-full.txt and set up VersionFrau in this project.
 
 ## Domain
 
-The site assumes `https://versionfrau.codehospital.com/`. To use another domain, replace it everywhere:
+The site assumes `https://versionfrau.aralel.com/`. To use another domain, replace it everywhere:
 
 ```bash
-grep -rl 'versionfrau.codehospital.com' . | xargs sed -i '' 's#versionfrau.codehospital.com#your.domain#g'
+grep -rl 'versionfrau.aralel.com' . | xargs sed -i '' 's#versionfrau.aralel.com#your.domain#g'
 ```
 
 ## Deployment
 
-Any static host works. See `DEPLOYMENT.md`.
+GitHub Pages from the `/docs` folder of `aralel/versionfrau`. See `DEPLOYMENT.md`.
 
 ## Keeping it current
 

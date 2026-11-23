@@ -43,21 +43,13 @@ Requirements: Gradle with the Android Gradle Plugin 8.x or 9.x (also works on pl
 
 ### Step 1 — settings.gradle.kts (project root)
 
-Add JitPack and the resolution rule inside `pluginManagement`. Merge with what is already there; do not remove existing repositories.
+The plugin and its plugin marker are on Maven Central (`com.aralel:versionfrau`). Make sure `mavenCentral()` is in `pluginManagement.repositories` — new Android Studio projects already have it, then nothing changes here. Merge with what is already there; do not remove existing repositories. Do not add JitPack or a `resolutionStrategy` (old instructions; no longer needed).
 
     pluginManagement {
         repositories {
-            maven { url = uri("https://jitpack.io") }
-            gradlePluginPortal()
             google()
             mavenCentral()
-        }
-        resolutionStrategy {
-            eachPlugin {
-                if (requested.id.id == "com.aralel.versionfrau") {
-                    useModule("com.github.aralel:versionfrau:${requested.version}")
-                }
-            }
+            gradlePluginPortal()
         }
     }
 
@@ -65,17 +57,9 @@ Groovy (settings.gradle):
 
     pluginManagement {
         repositories {
-            maven { url 'https://jitpack.io' }
-            gradlePluginPortal()
             google()
             mavenCentral()
-        }
-        resolutionStrategy {
-            eachPlugin {
-                if (requested.id.id == 'com.aralel.versionfrau') {
-                    useModule("com.github.aralel:versionfrau:${requested.version}")
-                }
-            }
+            gradlePluginPortal()
         }
     }
 
@@ -274,7 +258,7 @@ On Xcode, writes are locked, so parallel builds of several Xcode projects do not
 
 ## Troubleshooting
 
-- Android: "Plugin [id: 'com.aralel.versionfrau'] was not found" → JitPack repository or the resolutionStrategy block is missing in settings.gradle(.kts), or the version is wrong (use 0.0.18).
+- Android: "Plugin [id: 'com.aralel.versionfrau'] was not found" → `mavenCentral()` is missing from `pluginManagement { repositories { } }` in settings.gradle(.kts), or the version is wrong (use 0.0.18). If an old JitPack `resolutionStrategy` rule for `com.github.aralel:versionfrau` is present, remove it.
 - Xcode: Version/Build fields still show old values → a target still has hard-coded MARKETING_VERSION / CURRENT_PROJECT_VERSION, or an existing project-level xcconfig needs the `#include?` line printed by install.
 - Xcode: "Sandbox: … deny file-write" during the Run Script phase → set ENABLE_USER_SCRIPT_SANDBOXING = NO for that target (install does this).
 - Xcode: Swift package "no versions match 1.0.0..<2.0.0" → choose "Up to Next Major Version" from 0.0.19.
