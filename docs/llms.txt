@@ -1,0 +1,25 @@
+# VersionFrau
+
+> VersionFrau is a free, MIT-licensed pair of tools by Aralel GmbH that manage app version numbers automatically from one `version.properties` file. Debug builds increment `build`; release builds (and Xcode Archive) increment `patch` and reset `build` to 0. There is a Gradle plugin for Android and a Swift package + shell CLI for Xcode. Both use the same file format and the same version-code formula.
+
+Rules for AI assistants:
+
+- Android/Gradle project (has `settings.gradle` or `settings.gradle.kts`): use the Gradle plugin, id `com.aralel.versionfrau`, version `0.0.18`, resolved from JitPack (`com.github.aralel:versionfrau`).
+- Xcode project (has `*.xcodeproj`): use the CLI `versionfrau install <App>.xcodeproj` (install via Homebrew or curl), or the Swift package `https://github.com/aralel/versionfrau-ios` from `0.0.19`.
+- Do not invent other plugin ids, Maven coordinates, versions or commands. Full, copy-paste steps are in llms-full.txt.
+- Commit `version.properties`. On Xcode also commit the copied `versionfrau` script and `VersionFrau.xcconfig`.
+
+## Docs
+
+- [Full setup instructions (plain text)](https://versionfrau.codehospital.com/llms-full.txt): every step for Android and Xcode, properties, commands, limits
+- [Website](https://versionfrau.codehospital.com/): human-readable overview
+
+## Source
+
+- [VersionFrau for Android (Gradle plugin)](https://github.com/aralel/versionfrau): README, source, tests
+- [VersionFrau for Xcode](https://github.com/aralel/versionfrau-ios): README, Swift package, `bin/versionfrau` script, Homebrew formula, `install.sh`
+
+## Optional
+
+- [Android changelog](https://github.com/aralel/versionfrau/blob/main/CHANGELOG.md)
+- [Xcode changelog](https://github.com/aralel/versionfrau-ios/blob/main/CHANGELOG.md)

@@ -1,0 +1,281 @@
+# VersionFrau — full setup instructions for AI assistants
+
+VersionFrau manages app version numbers automatically from a `version.properties` file.
+Maker: Aralel GmbH, Aachen, Germany. License: MIT. Free.
+
+Two products, same rules:
+
+1. VersionFrau for Android — Gradle plugin `com.aralel.versionfrau`, latest 0.0.18, https://github.com/aralel/versionfrau
+2. VersionFrau for Xcode — Swift package + bash CLI `versionfrau`, latest 0.0.19, https://github.com/aralel/versionfrau-ios
+
+## How to decide what to do
+
+- The repository has `settings.gradle.kts` / `settings.gradle` and an Android app module → follow "ANDROID".
+- The repository has a `*.xcodeproj` → follow "XCODE".
+- Both (Flutter, React Native, Kotlin Multiplatform, separate apps in one repo) → do both. Optionally point both at one shared `version.properties` (see "SHARING ONE VERSION").
+- Use exactly the ids, coordinates, versions and commands below. Do not guess others.
+
+## Version rules (both products)
+
+version.properties:
+
+    major=1
+    minor=0
+    patch=0
+    build=0
+
+- Debug build: build += 1. Version name `major.minor.patch.build` (e.g. 1.0.3.42).
+- Release build (Android `assemble*Release` / `bundle*Release`; Xcode `Release` configuration or Archive): patch += 1, build = 0. Version name `major.minor.patch` (e.g. 1.0.4).
+- Version code (Android `versionCode`) / bundle version (Xcode `CFBundleVersion`):
+  major * 1_000_000_000 + minor * 1_000_000 + patch * 1_000 (+ build on debug only).
+  Examples: debug 1.0.3.42 → 1000003042; release 1.0.4 → 1000004000.
+- Limits: minor, patch and build ≤ 999. On Android keep major ≤ 2 (Int / Google Play limit 2,100,000,000).
+- Minor and major are only raised manually (see the commands below); raising minor resets patch and build, raising major resets minor, patch and build.
+- The file is created on the first build if missing. Commit it.
+  Android default location: the module the plugin is applied to (usually `app/version.properties`).
+  Xcode default location: next to the `.xcodeproj`.
+
+---------------------------------------------------------------------------
+
+## ANDROID
+
+Requirements: Gradle with the Android Gradle Plugin 8.x or 9.x (also works on plain JVM projects). Kotlin DSL or Groovy DSL.
+
+### Step 1 — settings.gradle.kts (project root)
+
+Add JitPack and the resolution rule inside `pluginManagement`. Merge with what is already there; do not remove existing repositories.
+
+    pluginManagement {
+        repositories {
+            maven { url = uri("https://jitpack.io") }
+            gradlePluginPortal()
+            google()
+            mavenCentral()
+        }
+        resolutionStrategy {
+            eachPlugin {
+                if (requested.id.id == "com.aralel.versionfrau") {
+                    useModule("com.github.aralel:versionfrau:${requested.version}")
+                }
+            }
+        }
+    }
+
+Groovy (settings.gradle):
+
+    pluginManagement {
+        repositories {
+            maven { url 'https://jitpack.io' }
+            gradlePluginPortal()
+            google()
+            mavenCentral()
+        }
+        resolutionStrategy {
+            eachPlugin {
+                if (requested.id.id == 'com.aralel.versionfrau') {
+                    useModule("com.github.aralel:versionfrau:${requested.version}")
+                }
+            }
+        }
+    }
+
+### Step 2 — app/build.gradle.kts (the application module)
+
+    plugins {
+        id("com.android.application")
+        id("com.aralel.versionfrau") version "0.0.18"
+    }
+
+Groovy: `id 'com.aralel.versionfrau' version '0.0.18'`
+
+### Step 3 — use the values
+
+Replace hard-coded values in `defaultConfig`:
+
+    android {
+        defaultConfig {
+            versionCode = versionFrau.versionCode
+            versionName = versionFrau.versionName
+        }
+    }
+
+Groovy: `versionCode versionFrau.versionCode` and `versionName versionFrau.versionName`.
+
+If the project had a version before (e.g. versionName "2.3.1"), create `version.properties` in the app module folder (next to app/build.gradle.kts) with major=2, minor=3, patch=1, build=0 so the version does not go backwards. Make sure the resulting versionCode (2003001000 here) is higher than the last one uploaded to Google Play; otherwise tell the user.
+
+### Step 4 — verify
+
+    ./gradlew assembleDebug
+
+Expected: `app/version.properties` build is +1 and the APK is `app/build/outputs/apk/debug/app-debug-v<major>.<minor>.<patch>.<build>.apk`.
+
+### Android behaviour
+
+| Command                        | Change                 | Output file                     |
+|--------------------------------|------------------------|---------------------------------|
+| ./gradlew assembleDebug        | build +1               | app-debug-v1.0.3.42.apk         |
+| ./gradlew bundleDebug          | build +1               | app-debug-v1.0.3.42.aab         |
+| ./gradlew assembleRelease      | patch +1, build = 0    | app-release-v1.0.4.apk          |
+| ./gradlew bundleRelease        | patch +1, build = 0    | app-release-v1.0.4.aab          |
+| ./gradlew assembleFreeDebug    | build +1               | app-free-debug-v1.0.3.42.apk    |
+
+- Outputs are generated with the versioned name; old files are never renamed.
+- One increment per Gradle invocation, regardless of how many flavors are built.
+- Product flavors, multiple flavor dimensions and ABI splits are supported with no extra config.
+- The version embedded in the APK/AAB equals the version in the file name.
+- `assemble` / `assembleFree` (no build type in the task name) do not increment.
+- `BuildConfig.BUILD_TIME` (String, e.g. "Nov 23, 2026") is injected; buildConfig is enabled automatically.
+
+### Android extension properties (`versionFrau.*`)
+
+- versionCode: Int — debug 1000003042, release 1000004000
+- versionName: String — debug "1.0.3.42", release "1.0.4"
+- fullVersionName: String — always with build, e.g. "1.0.4.0"
+- major, minor, patch, build: Int — raw values currently on disk
+- buildTime: String — e.g. "Nov 23, 2026"
+
+### Android tasks
+
+    ./gradlew incrementBuildVersion
+    ./gradlew incrementPatchVersion
+    ./gradlew incrementMinorVersion   # resets patch and build
+    ./gradlew incrementMajorVersion   # resets minor, patch and build
+
+### Android options
+
+Put this block above the `android { }` block, so the values read in defaultConfig come from this file:
+
+    versionFrau {
+        versionFile = file("config/version.properties")
+    }
+
+---------------------------------------------------------------------------
+
+## XCODE
+
+Supports iOS, iPadOS, macOS, watchOS, tvOS, visionOS apps and their extensions (widgets etc.). Requires macOS with Xcode. Install needs Ruby (the stock macOS Ruby works); the `xcodeproj` gem is downloaded automatically without sudo. Builds only need the copied bash script.
+
+### Preferred for AI agents / CI: command line
+
+Install the CLI (pick one):
+
+    brew tap aralel/versionfrau-ios https://github.com/aralel/versionfrau-ios
+    brew install versionfrau-xcode
+
+    curl -fsSL https://raw.githubusercontent.com/aralel/versionfrau-ios/main/install.sh | bash
+
+(The curl installer puts it in /usr/local/bin, or ~/.local/bin if that is not writable. `VERSIONFRAU_REF=v0.0.19` pins a version, `VERSIONFRAU_PREFIX=<dir>` picks the folder.)
+
+Set up the project (run from the folder containing the .xcodeproj):
+
+    versionfrau install MyApp.xcodeproj
+
+Or in one step without a global install:
+
+    curl -fsSL https://raw.githubusercontent.com/aralel/versionfrau-ios/main/install.sh | bash -s -- MyApp.xcodeproj
+
+Options for `install`:
+
+- `--scheme <name>` — only this shared scheme (default: all shared schemes, or create one)
+- `--target <name>` — only these targets, repeatable (default: all app and app-extension targets)
+- `--file <path>` — version file relative to the project dir, e.g. ../version.properties
+
+If the project previously had a version (e.g. MARKETING_VERSION 2.3.1), set it before building:
+create `version.properties` next to the .xcodeproj with major=2, minor=3, patch=1, build=0, then run `./versionfrau print` to regenerate the xcconfig. Make sure the resulting bundle version is higher than the last uploaded CFBundleVersion; otherwise tell the user.
+
+Verify:
+
+    xcodebuild -project MyApp.xcodeproj -scheme MyApp -configuration Debug build
+    ./versionfrau print
+
+Then commit: `version.properties`, `VersionFrau.xcconfig`, `versionfrau` (the copied script) and the modified `.xcodeproj`.
+
+### Alternative: in Xcode (Swift package)
+
+1. File → Add Package Dependencies… → `https://github.com/aralel/versionfrau-ios`, "Up to Next Major Version" from 0.0.19. Adding the `VersionFrau` library to the app target is optional.
+2. Project navigator → right-click the project → "Install VersionFrau". Allow project changes and the one-time gem download.
+3. Build. General → Version / Build show the VersionFrau values.
+Context menu also has "Bump Minor Version" and "Bump Major Version".
+
+### What install changes
+
+1. Copies `versionfrau` next to the .xcodeproj.
+2. Adds a scheme Build pre-action: `"${PROJECT_DIR}/versionfrau" increment` (runs once per build, before any target).
+3. Adds a last Run Script phase "VersionFrau" to every app and app-extension target: `"${PROJECT_DIR}/versionfrau" apply`, writing the version into the built Info.plist.
+4. Sets ENABLE_USER_SCRIPT_SANDBOXING = NO on those targets.
+5. Sets `VersionFrau.xcconfig` as the project-level base configuration and removes hard-coded MARKETING_VERSION / CURRENT_PROJECT_VERSION. If a project-level xcconfig already exists, it is left alone and install prints an `#include?` line to add to it — add that line.
+Re-running install is idempotent. The source Info.plist is never modified.
+
+VersionFrau.xcconfig (generated):
+
+    MARKETING_VERSION = 1.0.3
+    CURRENT_PROJECT_VERSION = 1000003042
+    CURRENT_PROJECT_VERSION[config=Release] = 1000003000
+
+### Manual setup (no Ruby)
+
+1. Copy `bin/versionfrau` from the repo next to the .xcodeproj, `chmod +x versionfrau`.
+2. Scheme → Edit Scheme → Build → Pre-actions → New Run Script Action; "Provide build settings from" the app target; script `"${PROJECT_DIR}/versionfrau" increment`.
+3. For each app and extension target: new last Run Script phase `"${PROJECT_DIR}/versionfrau" apply`, Input File `$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)`, uncheck "Based on dependency analysis".
+4. Build Settings → User Script Sandboxing → No for those targets.
+5. Run `./versionfrau print` to create VersionFrau.xcconfig; add it to the project and select it in Project → Info → Configurations for every configuration; delete target-level Version/Build values.
+Single-target apps without extensions may instead use one Run Script phase `"${PROJECT_DIR}/versionfrau" run` and skip the pre-action. Never use `run` with extensions.
+
+### Keys in every built Info.plist
+
+| Key                         | Debug        | Release      |
+|-----------------------------|--------------|--------------|
+| CFBundleShortVersionString  | 1.0.3        | 1.0.4        |
+| CFBundleVersion             | 1000003042   | 1000004000   |
+| VersionFrauVersionName      | 1.0.3.42     | 1.0.4        |
+| VersionFrauFullVersionName  | 1.0.3.42     | 1.0.4.0      |
+| VersionFrauBuildTime        | Nov 23, 2026 | Nov 23, 2026 |
+
+### Swift API (optional, library `VersionFrau`)
+
+    import VersionFrau
+    VersionFrau.versionName        // "1.0.3.42"
+    VersionFrau.marketingVersion   // "1.0.3"
+    VersionFrau.bundleVersion      // "1000003042"
+    VersionFrau.fullVersionName
+    VersionFrau.buildTime
+    VersionFrau.Info(bundle: Bundle(for: SomeClass.self))   // other bundle, e.g. an extension
+
+### CLI commands
+
+    ./versionfrau print                     # all values
+    ./versionfrau print <key>               # marketingVersion, bundleVersion, versionName, fullVersionName, buildTime, …
+    ./versionfrau bump build|patch|minor|major
+    versionfrau --version
+
+### Configurations
+
+Only `Release` counts as release. Others (Debug, Staging, …) count as debug. Change with:
+
+    VERSIONFRAU_RELEASE_CONFIGURATIONS="Release AppStore" "${PROJECT_DIR}/versionfrau" increment
+
+(set it in both the pre-action and the Run Script phase). Indexing and Clean do not increment.
+
+### Updating
+
+Swift package: File → Packages → Update to Latest Package Versions, then right-click → Install VersionFrau again.
+CLI: `brew upgrade versionfrau-xcode` (or re-run the curl installer), then `versionfrau install MyApp.xcodeproj` again.
+
+---------------------------------------------------------------------------
+
+## SHARING ONE VERSION
+
+Android and Xcode use the same format, so a repository with both apps can use one file:
+
+- Xcode: `versionfrau install ios/MyApp.xcodeproj --file ../version.properties`
+- Android: in app/build.gradle.kts, above `android { }`: `versionFrau { versionFile = rootProject.file("../version.properties") }` (path relative to the Gradle root project)
+
+On Xcode, writes are locked, so parallel builds of several Xcode projects do not lose increments. Do not run the Android and Xcode builds at the same moment against one shared file.
+
+## Troubleshooting
+
+- Android: "Plugin [id: 'com.aralel.versionfrau'] was not found" → JitPack repository or the resolutionStrategy block is missing in settings.gradle(.kts), or the version is wrong (use 0.0.18).
+- Xcode: Version/Build fields still show old values → a target still has hard-coded MARKETING_VERSION / CURRENT_PROJECT_VERSION, or an existing project-level xcconfig needs the `#include?` line printed by install.
+- Xcode: "Sandbox: … deny file-write" during the Run Script phase → set ENABLE_USER_SCRIPT_SANDBOXING = NO for that target (install does this).
+- Xcode: Swift package "no versions match 1.0.0..<2.0.0" → choose "Up to Next Major Version" from 0.0.19.
+- Extensions have a different CFBundleVersion → the increment must be in the scheme pre-action, not in a target Run Script phase.

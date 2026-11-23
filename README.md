@@ -1,9 +1,15 @@
 # VersionFrau
 
+**Website & AI setup instructions:** https://versionfrau.codehospital.com ([llms-full.txt](https://versionfrau.codehospital.com/llms-full.txt))
+
 A Gradle plugin that automatically manages version numbers for your Android (or JVM) project using a `version.properties` file.
 
 - **Debug build** (`assembleDebug` / `bundleDebug`) → increments **build** version
 - **Release build** (`assembleRelease` / `bundleRelease`) → increments **patch** version (resets build to 0)
+
+> **Xcode projects:** the same versioning for iOS / macOS apps is in
+> [VersionFrau for Xcode](https://github.com/aralel/versionfrau-ios) (Swift package, `brew install` or `curl | bash`).
+> It uses the same `version.properties` format, so an Android and an iOS app can share one version.
 
 ## Setup
 
@@ -35,7 +41,7 @@ In your app-level `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("com.aralel.versionfrau") version "1.0.0"
+    id("com.aralel.versionfrau") version "0.0.18"
 }
 ```
 
@@ -54,7 +60,7 @@ That's it. Two lines of config in `defaultConfig`.
 
 ## How It Works
 
-A `version.properties` file is created in your project root:
+A `version.properties` file is created in the folder of the module the plugin is applied to (usually `app/version.properties`). Commit it:
 
 ```properties
 major=1
@@ -108,7 +114,7 @@ the four-part version (e.g. `1.0.4.0`), release variants with the three-part one
 | `versionFrau.patch` | `Int` | `3` | `3` | Patch version |
 | `versionFrau.build` | `Int` | `42` | `0` | Build version (reset to 0 on release) |
 | `versionFrau.versionName` | `String` | `"1.0.3.42"` | `"1.0.3"` | Includes build only on debug |
-| `versionFrau.versionCode` | `Int` | `1000342` | `1000300` | Includes build only on debug |
+| `versionFrau.versionCode` | `Int` | `1000003042` | `1000003000` | `major*1_000_000_000 + minor*1_000_000 + patch*1_000` (+ `build` on debug) |
 | `versionFrau.fullVersionName` | `String` | `"1.0.3.42"` | `"1.0.3.42"` | Always includes build |
 | `versionFrau.buildTime` | `String` | `"Mar 19, 2026"` | `"Mar 19, 2026"` | Current build timestamp |
 
@@ -142,6 +148,8 @@ You can also run version bumps manually:
 ```
 
 ## Custom Version File Location
+
+Place this block above `android { }`, so `defaultConfig` reads the version from this file:
 
 ```kotlin
 versionFrau {

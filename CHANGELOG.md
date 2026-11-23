@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Docs
+- README: Xcode link now points to the real repository `aralel/versionfrau-ios` (was `aralel/versionfrau-xcode`)
+- README: plugin version in the setup example is `0.0.18` (the `1.0.0` shown before was never released)
+- README: `version.properties` is created in the module folder (usually `app/version.properties`), not the project root
+- README: `versionCode` examples match the code (`1000003042` / `1000003000`, formula `major*1_000_000_000 + minor*1_000_000 + patch*1_000 + build`)
+- README: custom `versionFile` block must be placed above `android { }`; link to the website https://versionfrau.codehospital.com
+
+### Xcode
+- VersionFrau for Xcode (added here as `xcode/`) moved to its own repository, [aralel/versionfrau-xcode](https://github.com/aralel/versionfrau-xcode), installable with Homebrew or a curl installer. The README links to it
+
 ### Publishing
 - Added `scripts/publish.sh`: picks the GPG key, uploads its public key to keyserver.ubuntu.com, exports the private key in Gradle's single-line form (no header/footer/checksum) with the matching 8-character key id, writes the signing and Central token properties to `~/.gradle/gradle.properties` (backup in `gradle.properties.bak`, `chmod 600`), verifies every artifact gets a `.asc` via `publishToMavenLocal`, then uploads (`--release` auto-releases, `--local-only` skips the upload, `--key <ID>` selects a key)
 - Added Maven Central publishing via `com.vanniktech.maven.publish` (version in the catalog): sources + javadoc jars, full POM (name, description, license, developer, SCM) and GPG signing

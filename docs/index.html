@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VersionFrau — automatic version numbers for Android (Gradle) and Xcode</title>
+<meta name="description" content="VersionFrau is a free, open-source (MIT) pair of tools that manage app version numbers automatically: a Gradle plugin for Android and a Swift package / CLI for Xcode (iOS, macOS, watchOS, tvOS, visionOS). Debug builds increment the build number, release builds increment the patch version.">
+<meta name="keywords" content="android version code, gradle plugin, auto increment version, versionCode, versionName, xcode build number, CFBundleVersion, CFBundleShortVersionString, MARKETING_VERSION, CURRENT_PROJECT_VERSION, ios versioning, swift package plugin, apk file name version, aab version">
+<link rel="canonical" href="https://versionfrau.codehospital.com/">
+<link rel="alternate" type="text/plain" title="LLM summary" href="llms.txt">
+<link rel="alternate" type="text/plain" title="LLM full instructions" href="llms-full.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EvF%3C/text%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="VersionFrau — automatic version numbers for Android and Xcode">
+<meta property="og:description" content="Debug build → build+1. Release build → patch+1. One version.properties file. Gradle plugin for Android, Swift package and CLI for Xcode.">
+<meta property="og:url" content="https://versionfrau.codehospital.com/">
+<meta name="twitter:card" content="summary">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "#aralel",
+      "name": "Aralel GmbH",
+      "address": { "@type": "PostalAddress", "addressLocality": "Aachen", "addressCountry": "DE" },
+      "url": "https://github.com/aralel"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "VersionFrau for Android (Gradle plugin)",
+      "alternateName": "com.aralel.versionfrau",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Android, JVM (Gradle)",
+      "softwareVersion": "0.0.18",
+      "license": "https://opensource.org/licenses/MIT",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+      "codeRepository": "https://github.com/aralel/versionfrau",
+      "url": "https://github.com/aralel/versionfrau",
+      "description": "Gradle plugin that manages versionName and versionCode from a version.properties file. Debug builds increment build, release builds increment patch. APK and AAB files are generated with the version in the file name.",
+      "author": { "@id": "#aralel" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "VersionFrau for Xcode",
+      "alternateName": "versionfrau-ios",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "macOS (Xcode); targets iOS, macOS, watchOS, tvOS, visionOS",
+      "softwareVersion": "0.0.19",
+      "license": "https://opensource.org/licenses/MIT",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+      "codeRepository": "https://github.com/aralel/versionfrau-ios",
+      "url": "https://github.com/aralel/versionfrau-ios",
+      "description": "Swift package with Xcode command plugins and a dependency-free shell script that manage MARKETING_VERSION and CURRENT_PROJECT_VERSION from a version.properties file, for the app and all its extensions.",
+      "author": { "@id": "#aralel" }
+    }
+  ]
+}
+</script>
+
+<style>
+:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f3f1ec;
+  --text: #1c1b19;
+  --muted: #5f5b53;
+  --border: #e3dfd6;
+  --accent: #0f766e;
+  --accent-soft: #e2f3f1;
+  --android: #3d7a2a;
+  --apple: #3b5bdb;
+  --code-bg: #f4f2ed;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141412;
+    --surface: #1c1c19;
+    --surface-2: #23231f;
+    --text: #ecebe6;
+    --muted: #a6a398;
+    --border: #34332e;
+    --accent: #2dd4bf;
+    --accent-soft: #11302c;
+    --android: #8bc34a;
+    --apple: #8ea6ff;
+    --code-bg: #1f1f1b;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; }
+
+header.site {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 5;
+}
+header.site .wrap { display: flex; align-items: center; gap: 20px; min-height: 56px; flex-wrap: wrap; }
+.brand { font-weight: 700; font-family: var(--mono); color: var(--text); text-decoration: none; font-size: 17px; }
+.brand span { color: var(--accent); }
+header nav { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; margin-left: auto; }
+header nav a { color: var(--muted); text-decoration: none; }
+header nav a:hover { color: var(--text); }
+
+.hero { padding-block: 64px 40px; }
+.eyebrow { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: .02em; margin: 0 0 12px; }
+h1 { font-size: clamp(32px, 5.5vw, 52px); line-height: 1.08; margin: 0 0 18px; letter-spacing: -0.02em; max-width: 18ch; }
+.lead { font-size: 19px; color: var(--muted); max-width: 62ch; margin: 0 0 28px; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 0 0 28px; }
+.rule { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.rule b { display: block; font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.rule code { font-size: 17px; background: none; padding: 0; }
+.cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--text); background: var(--surface); font-size: 15px; cursor: pointer; font-family: inherit; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (prefers-color-scheme: dark) { .btn.primary { color: #06211e; } }
+
+section { padding-block: 44px; border-top: 1px solid var(--border); }
+h2 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.01em; }
+h3 { font-size: 19px; margin: 32px 0 8px; }
+h4 { font-size: 16px; margin: 22px 0 6px; }
+.sub { color: var(--muted); margin: 0 0 20px; max-width: 70ch; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; font-family: var(--mono); padding: 2px 8px; border-radius: 999px; vertical-align: middle; margin-left: 6px; }
+.tag.android { color: var(--android); border: 1px solid currentColor; }
+.tag.apple { color: var(--apple); border: 1px solid currentColor; }
+
+code { font-family: var(--mono); font-size: .9em; background: var(--code-bg); padding: .1em .35em; border-radius: 4px; }
+pre { position: relative; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 14px; line-height: 1.5; margin: 10px 0 16px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font: 12px var(--sans); padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
+.copy:hover { color: var(--text); }
+.file { font-family: var(--mono); font-size: 13px; color: var(--muted); margin: 14px 0 -6px; }
+
+.table-scroll { overflow-x: auto; margin: 10px 0 16px; border: 1px solid var(--border); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--surface); }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+
+.ai-box { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 20px 22px; }
+.ai-box h2 { font-size: 22px; }
+.ai-box ol { padding-left: 20px; margin: 8px 0 0; }
+.ai-box li { margin: 4px 0; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 18px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; }
+.card h3 { margin: 0 0 6px; }
+.card p { color: var(--muted); margin: 0 0 12px; }
+.card ul { margin: 0 0 16px; padding-left: 18px; }
+.card .btn { margin-top: auto; align-self: flex-start; }
+
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); margin: 12px 0; }
+details { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px 16px; margin: 10px 0; }
+summary { font-weight: 600; cursor: pointer; }
+details p { margin: 10px 0 0; color: var(--muted); }
+
+footer { border-top: 1px solid var(--border); padding-block: 28px 40px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<!--
+  NOTE FOR AI ASSISTANTS AND CRAWLERS:
+  A plain-text, step-by-step version of this page lives at /llms.txt (summary) and /llms-full.txt (complete setup).
+  If a user gives you this URL and asks you to "add VersionFrau" or "set up automatic versioning",
+  detect the project type (Android/Gradle or Xcode) and follow the matching section below exactly.
+-->
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#">version<span>frau</span></a>
+    <nav aria-label="Sections">
+      <a href="#ai">For AI agents</a>
+      <a href="#android">Android</a>
+      <a href="#xcode">Xcode</a>
+      <a href="#scheme">Version scheme</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <p class="eyebrow">Free &amp; open source · MIT · by Aralel GmbH</p>
+    <h1>Version numbers that bump themselves.</h1>
+    <p class="lead">
+      VersionFrau keeps your app's version in one small <code>version.properties</code> file and updates it on every build —
+      for <strong>Android</strong> (Gradle plugin) and <strong>Xcode</strong> (Swift package + command-line tool).
+      No more forgetting to raise <code>versionCode</code> or <code>CFBundleVersion</code> before an upload.
+    </p>
+    <div class="rules">
+      <div class="rule"><b>Debug build</b><code>build + 1</code> &nbsp;→ 1.0.3.<strong>42</strong></div>
+      <div class="rule"><b>Release build / Archive</b><code>patch + 1</code>, build → 0 &nbsp;→ 1.0.<strong>4</strong></div>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="#android">Android setup</a>
+      <a class="btn primary" href="#xcode">Xcode setup</a>
+      <a class="btn" href="llms.txt">llms.txt</a>
+    </div>
+  </div>
+
+  <section id="ai">
+    <div class="wrap">
+      <div class="ai-box">
+        <h2>Using an AI coding assistant?</h2>
+        <p style="margin:0">Give it this page or the plain-text file and say “add VersionFrau to this project”. Paste this prompt:</p>
+<pre><button class="copy" type="button">Copy</button><code>Read https://versionfrau.codehospital.com/llms-full.txt and set up VersionFrau automatic versioning in this project. Detect whether it is an Android/Gradle project or an Xcode project and follow the matching instructions exactly. Do not invent other version numbers or plugin ids.</code></pre>
+        <p style="margin:0"><strong>Instructions for the assistant:</strong></p>
+        <ol>
+          <li>Find <code>settings.gradle(.kts)</code> → Android/Gradle → follow <a href="#android">VersionFrau for Android</a>.</li>
+          <li>Find <code>*.xcodeproj</code> → Xcode → follow <a href="#xcode">VersionFrau for Xcode</a> (CLI path: <code>versionfrau install &lt;App&gt;.xcodeproj</code>).</li>
+          <li>Both found (e.g. a Flutter/KMP repo)? Set up each one; they use the same <code>version.properties</code> format.</li>
+          <li>Remove hard-coded <code>versionCode</code>/<code>versionName</code> (Android) or <code>MARKETING_VERSION</code>/<code>CURRENT_PROJECT_VERSION</code> (Xcode) only where the steps say so.</li>
+          <li>Commit <code>version.properties</code> (and on Xcode the copied <code>versionfrau</code> script and <code>VersionFrau.xcconfig</code>).</li>
+        </ol>
+      </div>
+
+      <div class="cards">
+        <article class="card">
+          <h3>VersionFrau for Android <span class="tag android">Gradle</span></h3>
+          <p>Gradle plugin <code>com.aralel.versionfrau</code> · latest <code>0.0.18</code></p>
+          <ul>
+            <li>Sets <code>versionCode</code> and <code>versionName</code></li>
+            <li>APK/AAB named <code>app-release-v1.0.4.aab</code></li>
+            <li>Product flavors &amp; ABI splits supported</li>
+            <li><code>BuildConfig.BUILD_TIME</code> injected</li>
+          </ul>
+          <a class="btn" href="https://github.com/aralel/versionfrau">github.com/aralel/versionfrau</a>
+        </article>
+        <article class="card">
+          <h3>VersionFrau for Xcode <span class="tag apple">Swift · CLI</span></h3>
+          <p>Swift package + <code>versionfrau</code> script · latest <code>0.0.19</code></p>
+          <ul>
+            <li>Drives Xcode's <strong>Version</strong> and <strong>Build</strong> fields</li>
+            <li>App + all extensions always share one build number</li>
+            <li>iOS, macOS, watchOS, tvOS, visionOS</li>
+            <li>Install via Xcode, Homebrew or curl</li>
+          </ul>
+          <a class="btn" href="https://github.com/aralel/versionfrau-ios">github.com/aralel/versionfrau-ios</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ ANDROID ============================ -->
+  <section id="android">
+    <div class="wrap">
+      <h2>VersionFrau for Android <span class="tag android">Gradle plugin</span></h2>
+      <p class="sub">Works with the Android Gradle Plugin 8.x and 9.x, Kotlin DSL and Groovy DSL, with or without product flavors. Plugin id <code>com.aralel.versionfrau</code>, served from JitPack as <code>com.github.aralel:versionfrau</code>.</p>
+
+      <h3>1. Add the JitPack repository</h3>
+      <p class="file">settings.gradle.kts (project root)</p>
+<pre><button class="copy" type="button">Copy</button><code>pluginManagement {
+    repositories {
+        maven { url = uri("https://jitpack.io") }
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "com.aralel.versionfrau") {
+                useModule("com.github.aralel:versionfrau:${requested.version}")
+            }
+        }
+    }
+}</code></pre>
+
+      <h3>2. Apply the plugin</h3>
+      <p class="file">app/build.gradle.kts</p>
+<pre><button class="copy" type="button">Copy</button><code>plugins {
+    id("com.android.application")
+    id("com.aralel.versionfrau") version "0.0.18"
+}</code></pre>
+
+      <h3>3. Use the version</h3>
+      <p class="file">app/build.gradle.kts</p>
+<pre><button class="copy" type="button">Copy</button><code>android {
+    defaultConfig {
+        versionCode = versionFrau.versionCode
+        versionName = versionFrau.versionName
+    }
+}</code></pre>
+      <p>Replace any hard-coded <code>versionCode</code>/<code>versionName</code> with these two lines. On the first build a <code>version.properties</code> file appears in the module folder (usually <code>app/version.properties</code>) — commit it.</p>
+
+      <h3>What happens on each build</h3>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Command</th><th>Change</th><th>Output file</th></tr></thead>
+        <tbody>
+          <tr><td><code>./gradlew assembleDebug</code></td><td><code>build</code> +1</td><td><code>app-debug-v1.0.3.42.apk</code></td></tr>
+          <tr><td><code>./gradlew bundleDebug</code></td><td><code>build</code> +1</td><td><code>app-debug-v1.0.3.42.aab</code></td></tr>
+          <tr><td><code>./gradlew assembleRelease</code></td><td><code>patch</code> +1, <code>build</code> = 0</td><td><code>app-release-v1.0.4.apk</code></td></tr>
+          <tr><td><code>./gradlew bundleRelease</code></td><td><code>patch</code> +1, <code>build</code> = 0</td><td><code>app-release-v1.0.4.aab</code></td></tr>
+          <tr><td><code>./gradlew assembleFreeDebug</code></td><td><code>build</code> +1</td><td><code>app-free-debug-v1.0.3.42.apk</code></td></tr>
+        </tbody>
+      </table></div>
+      <p class="callout">Files are <em>generated</em> with the versioned name — older files in the output folder are never renamed. The version is incremented once per Gradle invocation, no matter how many flavors are built, and the version inside the APK/AAB always matches the file name.</p>
+
+      <h3>Extension properties</h3>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Property</th><th>Type</th><th>Debug</th><th>Release</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>versionFrau.versionCode</code></td><td>Int</td><td><code>1000003042</code></td><td><code>1000004000</code></td><td>includes build only on debug</td></tr>
+          <tr><td><code>versionFrau.versionName</code></td><td>String</td><td><code>1.0.3.42</code></td><td><code>1.0.4</code></td><td>includes build only on debug</td></tr>
+          <tr><td><code>versionFrau.fullVersionName</code></td><td>String</td><td><code>1.0.3.42</code></td><td><code>1.0.4.0</code></td><td>always includes build</td></tr>
+          <tr><td><code>versionFrau.major</code> / <code>minor</code> / <code>patch</code> / <code>build</code></td><td>Int</td><td colspan="2">raw values on disk</td><td></td></tr>
+          <tr><td><code>versionFrau.buildTime</code></td><td>String</td><td colspan="2"><code>Nov 23, 2026</code></td><td>also <code>BuildConfig.BUILD_TIME</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Manual bumps &amp; options</h3>
+<pre><button class="copy" type="button">Copy</button><code>./gradlew incrementBuildVersion
+./gradlew incrementPatchVersion
+./gradlew incrementMinorVersion   # resets patch and build
+./gradlew incrementMajorVersion   # resets minor, patch and build</code></pre>
+      <p class="file">app/build.gradle.kts — optional custom file location (place it above <code>android { }</code>)</p>
+<pre><button class="copy" type="button">Copy</button><code>versionFrau {
+    versionFile = file("config/version.properties")
+}</code></pre>
+    </div>
+  </section>
+
+  <!-- ============================ XCODE ============================ -->
+  <section id="xcode">
+    <div class="wrap">
+      <h2>VersionFrau for Xcode <span class="tag apple">Swift package · CLI</span></h2>
+      <p class="sub">For iOS, iPadOS, macOS, watchOS, tvOS and visionOS apps, including widgets and other app extensions. Builds only need a small bash script copied next to your project — no Ruby or Swift dependency at build time.</p>
+
+      <h3>Option A — in Xcode (Swift package)</h3>
+      <ol>
+        <li><strong>File → Add Package Dependencies…</strong> and enter <code>https://github.com/aralel/versionfrau-ios</code>. Choose <em>Up to Next Major Version</em> from <code>0.0.19</code>. Adding the <code>VersionFrau</code> library to your target is optional (only needed to read the version in Swift).</li>
+        <li>In the Project navigator, <strong>right-click the project → Install VersionFrau</strong>. Allow it to modify the project (and, the first time, to download the <code>xcodeproj</code> Ruby gem).</li>
+        <li>Build. <strong>General → Version / Build</strong> now show the VersionFrau version. Commit <code>version.properties</code>, <code>VersionFrau.xcconfig</code> and the copied <code>versionfrau</code> script.</li>
+      </ol>
+      <p>The same context menu has <strong>Bump Minor Version</strong> and <strong>Bump Major Version</strong>.</p>
+
+      <h3>Option B — command line (CI, scripts, AI agents)</h3>
+      <h4>Homebrew</h4>
+<pre><button class="copy" type="button">Copy</button><code>brew tap aralel/versionfrau-ios https://github.com/aralel/versionfrau-ios
+brew install versionfrau-xcode</code></pre>
+      <h4>curl</h4>
+<pre><button class="copy" type="button">Copy</button><code>curl -fsSL https://raw.githubusercontent.com/aralel/versionfrau-ios/main/install.sh | bash</code></pre>
+      <h4>Set up a project</h4>
+<pre><button class="copy" type="button">Copy</button><code>cd path/to/your/app
+versionfrau install MyApp.xcodeproj</code></pre>
+      <h4>…or in one step, without installing anything globally</h4>
+<pre><button class="copy" type="button">Copy</button><code>curl -fsSL https://raw.githubusercontent.com/aralel/versionfrau-ios/main/install.sh | bash -s -- MyApp.xcodeproj</code></pre>
+
+      <div class="table-scroll"><table>
+        <thead><tr><th>install option</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>--scheme &lt;name&gt;</code></td><td>Only add the pre-action to this shared scheme (default: all shared schemes)</td></tr>
+          <tr><td><code>--target &lt;name&gt;</code></td><td>Only these targets, repeatable (default: all app and app-extension targets)</td></tr>
+          <tr><td><code>--file &lt;path&gt;</code></td><td>Version file relative to the project dir, e.g. <code>../version.properties</code> to share one version between projects</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>What install changes</h3>
+      <ol>
+        <li>Copies <code>versionfrau</code> next to the <code>.xcodeproj</code>.</li>
+        <li>Adds a <strong>Build pre-action</strong> <code>"${PROJECT_DIR}/versionfrau" increment</code> to the shared scheme(s) — once per build.</li>
+        <li>Adds a last <strong>Run Script phase</strong> <code>"${PROJECT_DIR}/versionfrau" apply</code> to every app and extension target, writing the version into the built <code>Info.plist</code>.</li>
+        <li>Sets <code>ENABLE_USER_SCRIPT_SANDBOXING = NO</code> on those targets.</li>
+        <li>Makes <code>VersionFrau.xcconfig</code> the project's base configuration and removes hard-coded <code>MARKETING_VERSION</code> / <code>CURRENT_PROJECT_VERSION</code>.</li>
+      </ol>
+      <p>Running it again is safe: it replaces its own phase and pre-action instead of duplicating them. Your source <code>Info.plist</code> is never modified.</p>
+
+      <h3>Values written into every built Info.plist</h3>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Key</th><th>Debug</th><th>Release</th></tr></thead>
+        <tbody>
+          <tr><td><code>CFBundleShortVersionString</code></td><td><code>1.0.3</code></td><td><code>1.0.4</code></td></tr>
+          <tr><td><code>CFBundleVersion</code></td><td><code>1000003042</code></td><td><code>1000004000</code></td></tr>
+          <tr><td><code>VersionFrauVersionName</code></td><td><code>1.0.3.42</code></td><td><code>1.0.4</code></td></tr>
+          <tr><td><code>VersionFrauFullVersionName</code></td><td><code>1.0.3.42</code></td><td><code>1.0.4.0</code></td></tr>
+          <tr><td><code>VersionFrauBuildTime</code></td><td colspan="2"><code>Nov 23, 2026</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Read the version in Swift</h3>
+<pre><button class="copy" type="button">Copy</button><code>import VersionFrau
+
+Text("Version \(VersionFrau.versionName), built \(VersionFrau.buildTime)")
+// also: VersionFrau.marketingVersion, .bundleVersion, .fullVersionName
+// from an extension: VersionFrau.Info(bundle: Bundle(for: SomeClass.self))</code></pre>
+
+      <h3>Commands</h3>
+<pre><button class="copy" type="button">Copy</button><code>./versionfrau print                     # all values
+./versionfrau print marketingVersion    # one value
+./versionfrau bump build|patch|minor|major</code></pre>
+      <p>Only the <code>Release</code> configuration counts as release by default. Change it with
+      <code>VERSIONFRAU_RELEASE_CONFIGURATIONS="Release AppStore"</code> in the pre-action and Run Script phase.</p>
+    </div>
+  </section>
+
+  <!-- ============================ SCHEME ============================ -->
+  <section id="scheme">
+    <div class="wrap">
+      <h2>The shared version scheme</h2>
+      <p class="sub">Both tools read and write the same file and use the same rules, so an Android app and an iOS app can carry identical versions.</p>
+      <p class="file">version.properties</p>
+<pre><code>major=1
+minor=0
+patch=0
+build=0</code></pre>
+      <div class="table-scroll"><table>
+        <thead><tr><th></th><th>Debug build</th><th>Release build / Archive</th></tr></thead>
+        <tbody>
+          <tr><td>Change</td><td><code>build + 1</code></td><td><code>patch + 1</code>, <code>build = 0</code></td></tr>
+          <tr><td>Version name</td><td><code>major.minor.patch.build</code></td><td><code>major.minor.patch</code></td></tr>
+          <tr><td>Version code / bundle version</td><td colspan="2"><code>major × 1,000,000,000 + minor × 1,000,000 + patch × 1,000 (+ build on debug)</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>The code always grows with every build and release, as Google Play and App Store Connect require. Minor and major versions are raised deliberately: <code>./gradlew incrementMinorVersion</code> or <code>versionfrau bump minor</code>.</p>
+    </div>
+  </section>
+
+  <!-- ============================ FAQ ============================ -->
+  <section id="faq">
+    <div class="wrap">
+      <h2>FAQ</h2>
+      <details><summary>Do I need to commit version.properties?</summary>
+        <p>Yes. It is the source of truth. CI should build from the committed file; commit the bumped file after a release build.</p></details>
+      <details><summary>Why is the patch or build number limited?</summary>
+        <p>Each part gets three digits in the code (minor, patch, build ≤ 999). On Android the <code>versionCode</code> is an Int and Google Play accepts at most 2,100,000,000, so keep <code>major</code> at 2 or below.</p></details>
+      <details><summary>Does a Clean build or indexing increment the version?</summary>
+        <p>No. On Xcode, indexing and clean do nothing. On Android, only <code>assemble…</code> / <code>bundle…</code> tasks with a Debug or Release build type increment.</p></details>
+      <details><summary>Do my app and its extensions get the same build number?</summary>
+        <p>Yes. On Xcode the increment runs once in the scheme pre-action, before any target builds, so the app, widgets and other extensions all get the same <code>CFBundleVersion</code> — required by App Store Connect.</p></details>
+      <details><summary>Can several projects share one version?</summary>
+        <p>Yes. On Xcode use <code>versionfrau install … --file ../version.properties</code>; on Android set <code>versionFrau { versionFile = rootProject.file("../version.properties") }</code> above <code>android { }</code>. Xcode writes are locked, so parallel Xcode builds don't lose increments.</p></details>
+      <details><summary>What does it cost?</summary>
+        <p>Nothing. Both tools are MIT-licensed open source by Aralel GmbH, Aachen. Issues and pull requests are welcome on GitHub.</p></details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>© 2026 Aralel GmbH · Aachen, Germany · MIT License</div>
+    <div>
+      <a href="https://github.com/aralel/versionfrau">Android repo</a> ·
+      <a href="https://github.com/aralel/versionfrau-ios">Xcode repo</a> ·
+      <a href="llms.txt">llms.txt</a> ·
+      <a href="llms-full.txt">llms-full.txt</a> ·
+      <a href="impressum.html">Impressum</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('pre .copy').forEach(function (copyButton) {
+  copyButton.addEventListener('click', function () {
+    var codeText = copyButton.parentElement.querySelector('code').innerText;
+    navigator.clipboard.writeText(codeText).then(function () {
+      copyButton.textContent = 'Copied';
+      setTimeout(function () { copyButton.textContent = 'Copy'; }, 1500);
+    }).catch(function () { copyButton.textContent = 'Select & copy'; });
+  });
+});
+</script>
+</body>
+</html>

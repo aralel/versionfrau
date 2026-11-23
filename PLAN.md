@@ -1,5 +1,38 @@
 # Plan
 
+## Current prompt (2026-11-23)
+
+> fix the problems, domain will be versionfrau.codehospital.com
+
+### Status: done (no commits)
+
+- README links to the new website (`../website`, https://versionfrau.codehospital.com). Fixed: Xcode repo link (`versionfrau-ios`), version `0.0.18` instead of `1.0.0`, `app/version.properties` location, versionCode examples, `versionFrau {}` placement.
+
+## Current prompt (2026-10-24, follow-up)
+
+> can you move it out to it's own folder and also make it like a package we can install from github?
+
+### Status: done
+
+- `xcode/` moved to `/Users/maysam/Workspace/aralel/versionfrau-xcode` (its own package: Homebrew formula, curl installer,
+  release script, CI). Its PLAN.md and CHANGELOG.md carry the details. This repo only links to it from the README.
+
+## Current prompt (2026-10-24)
+
+> can we make a similar plugin for xcode projects?
+
+### Status: done
+
+- `xcode/versionfrau` (bash 3.2, no dependencies): scheme pre-action `increment` runs once per build, and the Run Script phase
+  `apply` runs in each app and extension target and patches the built Info.plist. Uses the same version.properties format,
+  formulas and debug/release rules as the Gradle plugin.
+- Why a pre-action: extensions build before the app, so incrementing inside a target's phase would give the app and its
+  extensions different CFBundleVersions, which App Store Connect rejects.
+- `install` uses the xcodeproj gem. Xcode 27 shows pre-action output and fails the build on a pre-action error.
+- Tests: `xcode/tests/run-tests.sh`, 33 passing (Xcode 27.1, iOS 27.1 simulator SDK); archive verified manually.
+- Follow-ups: Homebrew formula / separate repo for distribution; optional .ipa renaming on `-exportArchive`
+  (the analogue of the APK/AAB naming); SwiftUI preview builds are not detected and still increment.
+
 ## Current prompt (2026-10-18)
 
 > "Cannot find key with id '0x6D58632B' in key data" — can you make a bash file that does everything automatically?
