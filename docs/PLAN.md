@@ -1,5 +1,23 @@
 # Plan
 
+## Current prompt (2026-11-26, redesign)
+
+> redesign the website, give it more feminine developer vibe
+
+### Status: done (no commits, not deployed)
+
+- Only the `<style>` block and small markup additions in `index.html` (hero terminal, `<em>` in the headline, footer line). `impressum.html` keeps its plain style.
+- System fonts only (`ui-rounded` first) to stay GDPR-friendly. Checked in headless Chrome: desktop light, 500 px mobile, dark.
+
+## Current prompt (2026-11-26)
+
+> update the docs folder (https://www.npmjs.com/package/@aralel/react-native-versionfrau); the plugin url is versionfrau.aralel.com
+
+### Status: done (no commits, not deployed)
+
+- Added the React Native package to `index.html`, `llms.txt`, `llms-full.txt`, `sitemap.xml`, README and CHANGELOG. Links go to the npm page (no GitHub repo link, since the repo isn't confirmed). The site URL stays `https://versionfrau.aralel.com/`.
+- AI-agent rule: React Native / Expo projects use only the npm package, not the Gradle or Xcode instructions on top.
+
 ## Current prompt (2026-11-23, Maven Central)
 
 > we are not using jitpack.io anymore, remove it from documentation, plugin is published in mavencentral now

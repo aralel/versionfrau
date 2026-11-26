@@ -3,16 +3,18 @@
 VersionFrau manages app version numbers automatically from a `version.properties` file.
 Maker: Aralel GmbH, Aachen, Germany. License: MIT. Free.
 
-Two products, same rules:
+Three products, same rules:
 
 1. VersionFrau for Android — Gradle plugin `com.aralel.versionfrau`, latest 0.0.18, https://github.com/aralel/versionfrau
 2. VersionFrau for Xcode — Swift package + bash CLI `versionfrau`, latest 0.0.19, https://github.com/aralel/versionfrau-ios
+3. VersionFrau for React Native — npm package `@aralel/react-native-versionfrau`, latest 1.0.0, https://www.npmjs.com/package/@aralel/react-native-versionfrau (sets up 1 and 2 for a React Native / Expo app)
 
 ## How to decide what to do
 
-- The repository has `settings.gradle.kts` / `settings.gradle` and an Android app module → follow "ANDROID".
-- The repository has a `*.xcodeproj` → follow "XCODE".
-- Both (Flutter, React Native, Kotlin Multiplatform, separate apps in one repo) → do both. Optionally point both at one shared `version.properties` (see "SHARING ONE VERSION").
+- `package.json` depends on `react-native` (or `expo`) and the repository has `android/` and `ios/` → follow "REACT NATIVE" only. It configures the Android and iOS parts itself.
+- The repository has `settings.gradle.kts` / `settings.gradle` and an Android app module (no React Native) → follow "ANDROID".
+- The repository has a `*.xcodeproj` (no React Native) → follow "XCODE".
+- Both (Flutter, Kotlin Multiplatform, separate apps in one repo) → do both. Optionally point both at one shared `version.properties` (see "SHARING ONE VERSION").
 - Use exactly the ids, coordinates, versions and commands below. Do not guess others.
 
 ## Version rules (both products)
@@ -247,6 +249,90 @@ CLI: `brew upgrade versionfrau-xcode` (or re-run the curl installer), then `vers
 
 ---------------------------------------------------------------------------
 
+---------------------------------------------------------------------------
+
+## REACT NATIVE (and Expo)
+
+Package: `@aralel/react-native-versionfrau` 1.0.0 on npm, https://www.npmjs.com/package/@aralel/react-native-versionfrau
+Requirements: React Native 0.74 or newer (new and old architecture), Node 18+. The Android app uses Groovy `android/app/build.gradle` (the template default). The iOS setup needs macOS.
+One `version.properties` at the project root drives both platforms. `install` configures the Gradle plugin (Android) and the VersionFrau for Xcode script (iOS) — do NOT also follow the ANDROID or XCODE sections for the same app.
+
+### Step 1 — install and set up (bare React Native)
+
+Run from the project root (the folder with package.json):
+
+    npm install @aralel/react-native-versionfrau
+    npx versionfrau-rn install
+    cd ios && bundle exec pod install        # or: npx pod-install
+
+`install` does:
+1. Creates `version.properties` at the root if missing, seeded from package.json's "version" (x.y.z, build 0), else 1.0.0.0.
+2. Android: adds `classpath("com.aralel:versionfrau:0.0.18")` to buildscript dependencies in android/build.gradle; in android/app/build.gradle adds `apply plugin: "com.aralel.versionfrau"`, a `versionFrau { versionFile = file("../../version.properties") }` block before `android { }`, and replaces versionCode / versionName in defaultConfig with `versionFrau.versionCode` / `versionFrau.versionName`.
+3. iOS: runs the bundled Xcode script (`versionfrau install <App>.xcodeproj --file ../version.properties`): scheme pre-action, Run Script phase, ENABLE_USER_SCRIPT_SANDBOXING = NO, VersionFrau.xcconfig as base configuration, `ios/versionfrau` copied.
+It is idempotent. Options: `--android-only`, `--ios-only`, `--file <path>` (relative to the root), `--root <dir>`, `--scheme <name>`, `--target <name>` (repeatable).
+
+If the app had a version before (e.g. 2.3.1), make sure package.json "version" is 2.3.1 before the first install, or edit version.properties (major=2, minor=3, patch=1, build=0) afterwards. Make sure the resulting version codes are higher than the last ones uploaded to Google Play and App Store Connect; otherwise tell the user.
+
+If android/app/build.gradle.kts is used, `install` stops with a message: follow the ANDROID section manually, with `versionFile = file("../../version.properties")`, and run `versionfrau-rn install --ios-only` for iOS.
+
+### Step 1 (Expo with prebuild) — config plugin
+
+Add the plugin and rebuild the native folders:
+
+    npm install @aralel/react-native-versionfrau
+    // app.json
+    { "expo": { "plugins": ["@aralel/react-native-versionfrau"] } }
+    npx expo prebuild
+
+Custom file: `["@aralel/react-native-versionfrau", { "versionFile": "config/version.properties" }]`. `expo.version`, `ios.buildNumber` and `android.versionCode` in app.json are then overridden. Expo Go cannot load native modules; use a development build to read the version from JavaScript.
+
+### Step 2 — verify
+
+    npx react-native run-android        # does NOT increment (installDebug); use ./gradlew assembleDebug in android/ to see an increment
+    npx react-native run-ios            # build +1
+    npx versionfrau-rn print
+
+### Behaviour
+
+| Action                                  | Change               |
+|-----------------------------------------|----------------------|
+| ./gradlew assembleDebug / bundleDebug   | build +1             |
+| ./gradlew assembleRelease / bundleRelease | patch +1, build = 0 |
+| Xcode build / run (Debug)               | build +1             |
+| Xcode Archive / Release                 | patch +1, build = 0  |
+
+Android and iOS share the file, so a build on either platform moves both. Every release build raises patch, so releasing Android and then iOS from one file gives consecutive versions. To keep the same number on both stores use one file per platform:
+
+    npx versionfrau-rn install --android-only --file android/version.properties
+    npx versionfrau-rn install --ios-only --file ios/version.properties
+
+Commit version.properties after release builds.
+
+### JavaScript API
+
+    import VersionFrau, { getVersionInfo } from '@aralel/react-native-versionfrau';
+    VersionFrau.versionName        // "1.0.3.42" debug, "1.0.4" release
+    VersionFrau.fullVersionName    // always four-part, "1.0.4.0"
+    VersionFrau.marketingVersion   // "1.0.4"
+    VersionFrau.versionCode        // number, 1000003042 debug, 1000004000 release
+    VersionFrau.buildTime          // "Nov 26, 2026"
+    VersionFrau.isDebugBuild       // boolean
+    VersionFrau.major / minor / patch / build   // numbers
+    VersionFrau.isManagedByVersionFrau          // false if the app was not built with VersionFrau
+    getVersionInfo()               // the same values as one object
+
+Values are read synchronously from the installed app and cached. If the native module is not linked the call throws: rebuild the app (iOS: run pod install first).
+
+### Commands
+
+    npx versionfrau-rn print [key]   # major, minor, patch, build, marketingVersion, fullVersionName, debugVersionName, releaseVersionName, debugVersionCode, releaseVersionCode
+    npx versionfrau-rn bump build|patch|minor|major
+    npx versionfrau-rn version
+
+Commit: version.properties, android/build.gradle, android/app/build.gradle, ios/versionfrau, the .xcodeproj and its shared scheme, VersionFrau.xcconfig.
+
+---------------------------------------------------------------------------
+
 ## SHARING ONE VERSION
 
 Android and Xcode use the same format, so a repository with both apps can use one file:
@@ -262,4 +348,7 @@ On Xcode, writes are locked, so parallel builds of several Xcode projects do not
 - Xcode: Version/Build fields still show old values → a target still has hard-coded MARKETING_VERSION / CURRENT_PROJECT_VERSION, or an existing project-level xcconfig needs the `#include?` line printed by install.
 - Xcode: "Sandbox: … deny file-write" during the Run Script phase → set ENABLE_USER_SCRIPT_SANDBOXING = NO for that target (install does this).
 - Xcode: Swift package "no versions match 1.0.0..<2.0.0" → choose "Up to Next Major Version" from 0.0.19.
+- React Native: "The native module isn't linked" → rebuild the app after installing; on iOS run `pod install` first; Expo Go is not supported (use a development build).
+- React Native: `versionfrau-rn install` says "no android/build.gradle" or "no .xcodeproj" → run it from the project root, or pass `--root <dir>`; for an Expo project without android/ios folders use the config plugin and `npx expo prebuild`.
+- React Native: `run-android` leaves the version unchanged → expected, it runs installDebug; build with `./gradlew assembleDebug` or `assembleRelease` to increment.
 - Extensions have a different CFBundleVersion → the increment must be in the scheme pre-action, not in a target Run Script phase.

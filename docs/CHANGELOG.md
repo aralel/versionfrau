@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed — 2026-11-26 (redesign)
+- `index.html` redesigned with a softer, feminine developer look: blush / lavender palette with a rose-to-violet accent, rounded system font, pill navigation, gradient headline and buttons, pastel terminal-style code blocks (window dots, plum background), ✦ section markers and a hero terminal mock-up. Light and dark themes, still no external fonts, scripts or cookies; layout checked at 1200 px and 500 px width. Content, ids and links unchanged
+
+### Added — 2026-11-26 (React Native)
+- VersionFrau for React Native (`@aralel/react-native-versionfrau` 1.0.0, https://www.npmjs.com/package/@aralel/react-native-versionfrau): new `#react-native` section, nav link, hero button and card in `index.html`; third `SoftwareApplication` in the JSON-LD; title, description and keywords mention React Native
+- `llms.txt` and `llms-full.txt`: React Native / Expo rule, REACT NATIVE section (install, `versionfrau-rn install`, Expo config plugin, JS API, behaviour, commands) and troubleshooting; project detection says React Native apps use only that section
+- `sitemap.xml` lastmod 2026-11-26; README lists the React Native version to keep current
+
 ### Changed — 2026-11-23 (Maven Central)
 - Android setup uses Maven Central instead of JitPack (`index.html`, `llms.txt`, `llms-full.txt`, troubleshooting); `resolutionStrategy` block removed
 

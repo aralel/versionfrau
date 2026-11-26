@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>VersionFrau — automatic version numbers for Android (Gradle) and Xcode</title>
-<meta name="description" content="VersionFrau is a free, open-source (MIT) pair of tools that manage app version numbers automatically: a Gradle plugin for Android and a Swift package / CLI for Xcode (iOS, macOS, watchOS, tvOS, visionOS). Debug builds increment the build number, release builds increment the patch version.">
-<meta name="keywords" content="android version code, gradle plugin, auto increment version, versionCode, versionName, xcode build number, CFBundleVersion, CFBundleShortVersionString, MARKETING_VERSION, CURRENT_PROJECT_VERSION, ios versioning, swift package plugin, apk file name version, aab version">
+<title>VersionFrau — automatic version numbers for Android (Gradle), Xcode and React Native</title>
+<meta name="description" content="VersionFrau is a free, open-source (MIT) pair of tools that manage app version numbers automatically: a Gradle plugin for Android, a Swift package / CLI for Xcode (iOS, macOS, watchOS, tvOS, visionOS) and an npm package for React Native and Expo. Debug builds increment the build number, release builds increment the patch version.">
+<meta name="keywords" content="android version code, gradle plugin, auto increment version, versionCode, versionName, xcode build number, CFBundleVersion, CFBundleShortVersionString, MARKETING_VERSION, CURRENT_PROJECT_VERSION, ios versioning, swift package plugin, apk file name version, aab version, react native version, react native build number, expo prebuild version">
 <link rel="canonical" href="https://versionfrau.aralel.com/">
 <link rel="alternate" type="text/plain" title="LLM summary" href="llms.txt">
 <link rel="alternate" type="text/plain" title="LLM full instructions" href="llms-full.txt">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3EvF%3C/text%3E%3C/svg%3E">
 <meta property="og:type" content="website">
-<meta property="og:title" content="VersionFrau — automatic version numbers for Android and Xcode">
-<meta property="og:description" content="Debug build → build+1. Release build → patch+1. One version.properties file. Gradle plugin for Android, Swift package and CLI for Xcode.">
+<meta property="og:title" content="VersionFrau — automatic version numbers for Android, Xcode and React Native">
+<meta property="og:description" content="Debug build → build+1. Release build → patch+1. One version.properties file. Gradle plugin for Android, Swift package and CLI for Xcode, npm package for React Native.">
 <meta property="og:url" content="https://versionfrau.aralel.com/">
 <meta name="twitter:card" content="summary">
 
@@ -54,6 +54,20 @@
       "url": "https://github.com/aralel/versionfrau-ios",
       "description": "Swift package with Xcode command plugins and a dependency-free shell script that manage MARKETING_VERSION and CURRENT_PROJECT_VERSION from a version.properties file, for the app and all its extensions.",
       "author": { "@id": "#aralel" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "VersionFrau for React Native",
+      "alternateName": "@aralel/react-native-versionfrau",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Android, iOS (React Native, Expo prebuild)",
+      "softwareVersion": "1.0.0",
+      "license": "https://opensource.org/licenses/MIT",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+      "downloadUrl": "https://www.npmjs.com/package/@aralel/react-native-versionfrau",
+      "url": "https://www.npmjs.com/package/@aralel/react-native-versionfrau",
+      "description": "npm package that keeps one version.properties for a React Native app: sets up the VersionFrau Gradle plugin and Xcode script, and exposes the built-in version to JavaScript.",
+      "author": { "@id": "#aralel" }
     }
   ]
 }
@@ -61,115 +75,178 @@
 
 <style>
 :root {
-  --bg: #fbfaf7;
+  --bg: #fff6fb;
+  --bg-glow-1: #ffd9ec;
+  --bg-glow-2: #e4dcff;
   --surface: #ffffff;
-  --surface-2: #f3f1ec;
-  --text: #1c1b19;
-  --muted: #5f5b53;
-  --border: #e3dfd6;
-  --accent: #0f766e;
-  --accent-soft: #e2f3f1;
-  --android: #3d7a2a;
-  --apple: #3b5bdb;
-  --code-bg: #f4f2ed;
+  --surface-2: #fdeef7;
+  --text: #2b1f36;
+  --muted: #6e5f7b;
+  --border: #f3d8e8;
+  --accent: #d6336c;
+  --accent-2: #7c5cd6;
+  --accent-soft: #fde7f3;
+  --on-accent: #ffffff;
+  --android: #1c9a85;
+  --apple: #7c5cd6;
+  --rn: #e8590c;
+  --inline-code-bg: #fde7f3;
+  --inline-code-text: #a61e58;
+  --term-bg: #2b2140;
+  --term-text: #f6e9ff;
+  --term-dim: #a899c2;
+  --dot-1: #ff8fa3;
+  --dot-2: #ffd27a;
+  --dot-3: #8fe3b6;
+  --shadow: 0 10px 30px -12px rgba(124, 92, 214, .28);
+  --sans: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #141412;
-    --surface: #1c1c19;
-    --surface-2: #23231f;
-    --text: #ecebe6;
-    --muted: #a6a398;
-    --border: #34332e;
-    --accent: #2dd4bf;
-    --accent-soft: #11302c;
-    --android: #8bc34a;
-    --apple: #8ea6ff;
-    --code-bg: #1f1f1b;
+    --bg: #17101f;
+    --bg-glow-1: #3a1730;
+    --bg-glow-2: #241a4a;
+    --surface: #211730;
+    --surface-2: #2a1d3c;
+    --text: #f6ecfb;
+    --muted: #b9a8c9;
+    --border: #3b2b4e;
+    --accent: #ff8fc7;
+    --accent-2: #b8a1ff;
+    --accent-soft: #3a1c33;
+    --on-accent: #2b0f20;
+    --android: #6fe0c8;
+    --apple: #b8a1ff;
+    --rn: #ffa987;
+    --inline-code-bg: #38203a;
+    --inline-code-text: #ffb3d9;
+    --term-bg: #0f0a17;
+    --term-text: #f6e9ff;
+    --term-dim: #8f7fa8;
+    --shadow: 0 10px 30px -12px rgba(0, 0, 0, .6);
     color-scheme: dark;
   }
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
 body {
   margin: 0;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(60rem 28rem at 8% -6%, var(--bg-glow-1), transparent 70%),
+    radial-gradient(50rem 26rem at 100% 4%, var(--bg-glow-2), transparent 70%);
+  background-repeat: no-repeat;
   color: var(--text);
-  font: 16px/1.6 var(--sans);
+  font: 16px/1.65 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
-a { color: var(--accent); text-underline-offset: 2px; }
-.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; }
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+a:hover { color: var(--accent-2); }
+:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 2px; border-radius: 6px; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-inline: 20px; }
 
 header.site {
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  position: sticky; top: 0; z-index: 5;
+  position: sticky; top: 10px; z-index: 5; padding-inline: 12px;
 }
-header.site .wrap { display: flex; align-items: center; gap: 20px; min-height: 56px; flex-wrap: wrap; }
-.brand { font-weight: 700; font-family: var(--mono); color: var(--text); text-decoration: none; font-size: 17px; }
+header.site .wrap {
+  display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap;
+  min-height: 56px; padding: 6px 12px 6px 20px;
+  max-width: 1000px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow);
+}
+.brand { font-weight: 800; font-family: var(--mono); color: var(--text); text-decoration: none; font-size: 17px; letter-spacing: -.02em; }
 .brand span { color: var(--accent); }
-header nav { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; margin-left: auto; }
-header nav a { color: var(--muted); text-decoration: none; }
-header nav a:hover { color: var(--text); }
+.brand::before { content: "✦ "; color: var(--accent-2); }
+header nav { display: flex; gap: 4px; flex-wrap: wrap; font-size: 14px; margin-left: auto; }
+header nav a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 999px; transition: background .15s, color .15s; }
+header nav a:hover { color: var(--accent); background: var(--accent-soft); }
 
-.hero { padding-block: 64px 40px; }
-.eyebrow { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: .02em; margin: 0 0 12px; }
-h1 { font-size: clamp(32px, 5.5vw, 52px); line-height: 1.08; margin: 0 0 18px; letter-spacing: -0.02em; max-width: 18ch; }
-.lead { font-size: 19px; color: var(--muted); max-width: 62ch; margin: 0 0 28px; }
-.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 0 0 28px; }
-.rule { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
-.rule b { display: block; font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
-.rule code { font-size: 17px; background: none; padding: 0; }
+.hero { padding-block: 72px 48px; display: grid; min-width: 0; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 36px 44px; align-items: center; }
+@media (max-width: 820px) { .hero { grid-template-columns: minmax(0, 1fr); padding-block: 48px 32px; } }
+.hero-copy { min-width: 0; }
+.eyebrow { display: inline-block; font-family: var(--mono); font-size: 13px; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 14px; margin: 0 0 18px; }
+h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1.05; margin: 0 0 18px; letter-spacing: -0.03em; font-weight: 800; }
+h1 em { font-style: normal; background: linear-gradient(100deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { font-size: 19px; color: var(--muted); max-width: 60ch; margin: 0 0 26px; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 0 0 26px; }
+.rule { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); }
+.rule b { display: block; font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.rule code { font-size: 16px; }
 .cta { display: flex; gap: 10px; flex-wrap: wrap; }
-.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--text); background: var(--surface); font-size: 15px; cursor: pointer; font-family: inherit; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-@media (prefers-color-scheme: dark) { .btn.primary { color: #06211e; } }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; font-weight: 700; text-decoration: none; border: 1.5px solid var(--border); color: var(--text); background: var(--surface); font-size: 15px; cursor: pointer; font-family: inherit; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.btn:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--accent); box-shadow: var(--shadow); }
+.btn.primary { background: linear-gradient(100deg, var(--accent), var(--accent-2)); border-color: transparent; color: var(--on-accent); }
+.btn.primary:hover { color: var(--on-accent); border-color: transparent; }
 
-section { padding-block: 44px; border-top: 1px solid var(--border); }
-h2 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.01em; }
-h3 { font-size: 19px; margin: 32px 0 8px; }
-h4 { font-size: 16px; margin: 22px 0 6px; }
-.sub { color: var(--muted); margin: 0 0 20px; max-width: 70ch; }
-.tag { display: inline-block; font-size: 12px; font-weight: 700; font-family: var(--mono); padding: 2px 8px; border-radius: 999px; vertical-align: middle; margin-left: 6px; }
-.tag.android { color: var(--android); border: 1px solid currentColor; }
-.tag.apple { color: var(--apple); border: 1px solid currentColor; }
+.term { background: var(--term-bg); color: var(--term-text); border-radius: 18px; box-shadow: var(--shadow), 0 0 0 1px rgba(255,255,255,.04) inset; overflow: hidden; font-family: var(--mono); font-size: 13.5px; line-height: 1.7; }
+.term-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,.07); color: var(--term-dim); font-size: 12px; }
+.term-bar i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+.term-bar i:nth-child(1) { background: var(--dot-1); }
+.term-bar i:nth-child(2) { background: var(--dot-2); }
+.term-bar i:nth-child(3) { background: var(--dot-3); }
+.term-bar span { margin-left: 8px; }
+.term-body { padding: 14px 18px 18px; overflow-x: auto; white-space: pre; }
+.term .p { color: var(--dot-3); }
+.term .d { color: var(--term-dim); }
+.term .h { color: #ff9fd0; }
+.term .v { color: #ffd27a; font-weight: 700; }
 
-code { font-family: var(--mono); font-size: .9em; background: var(--code-bg); padding: .1em .35em; border-radius: 4px; }
-pre { position: relative; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 14px; line-height: 1.5; margin: 10px 0 16px; }
-pre code { background: none; padding: 0; font-size: inherit; }
-.copy { position: absolute; top: 8px; right: 8px; font: 12px var(--sans); padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
-.copy:hover { color: var(--text); }
-.file { font-family: var(--mono); font-size: 13px; color: var(--muted); margin: 14px 0 -6px; }
+section { padding-block: 52px; }
+h2 { font-size: clamp(26px, 4vw, 34px); margin: 0 0 8px; letter-spacing: -0.02em; font-weight: 800; }
+h2::before { content: "✦"; color: var(--accent); margin-right: 10px; font-size: .7em; vertical-align: .12em; }
+h3 { font-size: 19px; margin: 34px 0 8px; font-weight: 700; }
+h3::before { content: "# "; color: var(--accent-2); font-family: var(--mono); font-weight: 400; }
+.card h3::before, .ai-box h3::before { content: none; }
+h4 { font-size: 16px; margin: 22px 0 6px; color: var(--muted); }
+.sub { color: var(--muted); margin: 0 0 20px; max-width: 72ch; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; font-family: var(--mono); padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px; background: var(--surface); }
+.tag.android { color: var(--android); border: 1.5px solid currentColor; }
+.tag.apple { color: var(--apple); border: 1.5px solid currentColor; }
+.tag.rn { color: var(--rn); border: 1.5px solid currentColor; }
 
-.table-scroll { overflow-x: auto; margin: 10px 0 16px; border: 1px solid var(--border); border-radius: 8px; }
-table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--surface); }
-th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+code { font-family: var(--mono); font-size: .88em; background: var(--inline-code-bg); color: var(--inline-code-text); padding: .12em .45em; border-radius: 7px; }
+pre { position: relative; background: var(--term-bg); color: var(--term-text); border-radius: 14px; padding: 40px 18px 16px; overflow-x: auto; font-size: 14px; line-height: 1.6; margin: 12px 0 18px; box-shadow: var(--shadow); }
+pre::before { content: ""; position: absolute; left: 16px; top: 14px; width: 11px; height: 11px; border-radius: 50%; background: var(--dot-1); box-shadow: 18px 0 0 var(--dot-2), 36px 0 0 var(--dot-3); }
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 7px; right: 10px; font: 12px var(--sans); padding: 3px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.07); color: var(--term-text); cursor: pointer; transition: background .15s; }
+.copy:hover { background: rgba(255,255,255,.18); }
+.file { font-family: var(--mono); font-size: 13px; color: var(--accent-2); margin: 16px 0 -4px; }
+.file::before { content: "♡ "; color: var(--accent); }
+
+.table-scroll { overflow-x: auto; margin: 12px 0 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--surface-2); font-weight: 700; white-space: nowrap; color: var(--accent-2); }
 tr:last-child td { border-bottom: 0; }
 
-.ai-box { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 20px 22px; }
-.ai-box h2 { font-size: 22px; }
-.ai-box ol { padding-left: 20px; margin: 8px 0 0; }
-.ai-box li { margin: 4px 0; }
+.ai-box { background: linear-gradient(135deg, var(--accent-soft), var(--surface-2)); border: 1.5px solid var(--accent); border-radius: 20px; padding: 24px 26px; box-shadow: var(--shadow); }
+.ai-box h2 { font-size: 24px; }
+.ai-box pre code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-box ol { padding-left: 22px; margin: 8px 0 0; }
+.ai-box li { margin: 6px 0; }
 
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 18px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; margin-top: 22px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; box-shadow: var(--shadow); transition: transform .2s; }
+.card:hover { transform: translateY(-3px); }
 .card h3 { margin: 0 0 6px; }
 .card p { color: var(--muted); margin: 0 0 12px; }
-.card ul { margin: 0 0 16px; padding-left: 18px; }
-.card .btn { margin-top: auto; align-self: flex-start; }
+.card ul { margin: 0 0 18px; padding-left: 18px; }
+.card li::marker { color: var(--accent); content: "✦  "; }
+.card .btn { margin-top: auto; align-self: flex-start; font-size: 13px; padding: 8px 14px; overflow-wrap: anywhere; }
 
-.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); margin: 12px 0; }
-details { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px 16px; margin: 10px 0; }
-summary { font-weight: 600; cursor: pointer; }
+.callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; padding: 10px 16px; color: var(--text); margin: 14px 0; }
+details { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 12px 18px; margin: 10px 0; }
+details[open] { border-color: var(--accent); }
+summary { font-weight: 700; cursor: pointer; }
 details p { margin: 10px 0 0; color: var(--muted); }
 
-footer { border-top: 1px solid var(--border); padding-block: 28px 40px; color: var(--muted); font-size: 14px; }
-footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: space-between; }
+footer { padding-block: 32px 48px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 24px; }
 </style>
 </head>
 <body>
@@ -178,7 +255,7 @@ footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: 
   NOTE FOR AI ASSISTANTS AND CRAWLERS:
   A plain-text, step-by-step version of this page lives at /llms.txt (summary) and /llms-full.txt (complete setup).
   If a user gives you this URL and asks you to "add VersionFrau" or "set up automatic versioning",
-  detect the project type (Android/Gradle or Xcode) and follow the matching section below exactly.
+  detect the project type (Android/Gradle, Xcode or React Native) and follow the matching section below exactly.
 -->
 
 <header class="site">
@@ -188,6 +265,7 @@ footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: 
       <a href="#ai">For AI agents</a>
       <a href="#android">Android</a>
       <a href="#xcode">Xcode</a>
+      <a href="#react-native">React Native</a>
       <a href="#scheme">Version scheme</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -196,11 +274,12 @@ footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: 
 
 <main>
   <div class="wrap hero">
-    <p class="eyebrow">Free &amp; open source · MIT · by Aralel GmbH</p>
-    <h1>Version numbers that bump themselves.</h1>
+   <div class="hero-copy">
+    <p class="eyebrow">✦ Free &amp; open source · MIT · by Aralel GmbH</p>
+    <h1>Version numbers that <em>bump themselves.</em></h1>
     <p class="lead">
       VersionFrau keeps your app's version in one small <code>version.properties</code> file and updates it on every build —
-      for <strong>Android</strong> (Gradle plugin) and <strong>Xcode</strong> (Swift package + command-line tool).
+      for <strong>Android</strong> (Gradle plugin), <strong>Xcode</strong> (Swift package + command-line tool) and <strong>React Native</strong> (npm package).
       No more forgetting to raise <code>versionCode</code> or <code>CFBundleVersion</code> before an upload.
     </p>
     <div class="rules">
@@ -210,8 +289,23 @@ footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: 
     <div class="cta">
       <a class="btn primary" href="#android">Android setup</a>
       <a class="btn primary" href="#xcode">Xcode setup</a>
+      <a class="btn primary" href="#react-native">React Native setup</a>
       <a class="btn" href="llms.txt">llms.txt</a>
     </div>
+   </div>
+   <div class="term" role="img" aria-label="Example terminal output: a debug build raises build to 1.0.3.42, a release build raises patch to 1.0.4">
+     <div class="term-bar"><i></i><i></i><i></i><span>~/my-app</span></div>
+<div class="term-body"><span class="p">$</span> ./gradlew assembleDebug
+<span class="h">✦</span> build → <span class="v">1.0.3.42</span>
+<span class="d">  → app-debug-v1.0.3.42.apk</span>
+
+<span class="p">$</span> ./gradlew assembleRelease
+<span class="h">✦</span> patch → <span class="v">1.0.4</span>
+<span class="d">  → app-release-v1.0.4.aab</span>
+
+<span class="p">$</span> xcodebuild -configuration Release archive
+<span class="h">✦</span> patch → <span class="v">1.0.5</span> <span class="d">(1000005000)</span></div>
+   </div>
   </div>
 
   <section id="ai">
@@ -223,8 +317,9 @@ footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: 
         <p style="margin:0"><strong>Instructions for the assistant:</strong></p>
         <ol>
           <li>Find <code>settings.gradle(.kts)</code> → Android/Gradle → follow <a href="#android">VersionFrau for Android</a>.</li>
-          <li>Find <code>*.xcodeproj</code> → Xcode → follow <a href="#xcode">VersionFrau for Xcode</a> (CLI path: <code>versionfrau install &lt;App&gt;.xcodeproj</code>).</li>
-          <li>Both found (e.g. a Flutter/KMP repo)? Set up each one; they use the same <code>version.properties</code> format.</li>
+          <li>Find <code>package.json</code> with <code>react-native</code> and <code>android/</code> + <code>ios/</code> folders → React Native → follow <a href="#react-native">VersionFrau for React Native</a> (<code>npm install @aralel/react-native-versionfrau</code>, then <code>npx versionfrau-rn install</code>). Do not also set up the native Android and Xcode parts by hand.</li>
+          <li>Find <code>*.xcodeproj</code> in a native iOS project → follow <a href="#xcode">VersionFrau for Xcode</a> (CLI path: <code>versionfrau install &lt;App&gt;.xcodeproj</code>).</li>
+          <li>Both found (e.g. a Flutter/KMP repo, not React Native)? Set up each one; they use the same <code>version.properties</code> format.</li>
           <li>Remove hard-coded <code>versionCode</code>/<code>versionName</code> (Android) or <code>MARKETING_VERSION</code>/<code>CURRENT_PROJECT_VERSION</code> (Xcode) only where the steps say so.</li>
           <li>Commit <code>version.properties</code> (and on Xcode the copied <code>versionfrau</code> script and <code>VersionFrau.xcconfig</code>).</li>
         </ol>
@@ -252,6 +347,17 @@ footer .wrap { display: flex; gap: 16px 28px; flex-wrap: wrap; justify-content: 
             <li>Install via Xcode, Homebrew or curl</li>
           </ul>
           <a class="btn" href="https://github.com/aralel/versionfrau-ios">github.com/aralel/versionfrau-ios</a>
+        </article>
+        <article class="card">
+          <h3>VersionFrau for React Native <span class="tag rn">npm</span></h3>
+          <p>npm package <code>@aralel/react-native-versionfrau</code> · latest <code>1.0.0</code></p>
+          <ul>
+            <li>One version file for Android and iOS</li>
+            <li>Sets up the Gradle plugin and the Xcode script</li>
+            <li>Read the version in JavaScript</li>
+            <li>New and old architecture, Expo prebuild</li>
+          </ul>
+          <a class="btn" href="https://www.npmjs.com/package/@aralel/react-native-versionfrau">npmjs.com/package/@aralel/react-native-versionfrau</a>
         </article>
       </div>
     </div>
@@ -401,11 +507,75 @@ Text("Version \(VersionFrau.versionName), built \(VersionFrau.buildTime)")
     </div>
   </section>
 
+  <!-- ============================ REACT NATIVE ============================ -->
+  <section id="react-native">
+    <div class="wrap">
+      <h2>VersionFrau for React Native <span class="tag rn">npm package</span></h2>
+      <p class="sub">One <code>version.properties</code> at the project root drives the Android <code>versionCode</code> / <code>versionName</code> and the iOS Version / Build. It wires up the Gradle plugin and the Xcode script for you, and your JavaScript can read the version. Works with the new and the old architecture, and with Expo prebuild. Published on <a href="https://www.npmjs.com/package/@aralel/react-native-versionfrau">npm</a> as <code>@aralel/react-native-versionfrau</code>.</p>
+
+      <h3>1. Install and set up</h3>
+<pre><button class="copy" type="button">Copy</button><code>npm install @aralel/react-native-versionfrau
+npx versionfrau-rn install
+cd ios &amp;&amp; bundle exec pod install     # or: npx pod-install</code></pre>
+      <p>Rebuild the app, then commit <code>version.properties</code>, <code>android/build.gradle</code>, <code>android/app/build.gradle</code> and the <code>ios/</code> changes (the copied <code>versionfrau</code> script, the project and its shared scheme, <code>VersionFrau.xcconfig</code>). Running <code>install</code> again is safe.</p>
+
+      <h3>What install changes</h3>
+      <ol>
+        <li>Creates <code>version.properties</code> at the project root if missing, seeded from <code>package.json</code>'s <code>version</code>.</li>
+        <li><strong>Android:</strong> adds <code>classpath("com.aralel:versionfrau:0.0.18")</code> to <code>android/build.gradle</code>; in <code>android/app/build.gradle</code> applies <code>com.aralel.versionfrau</code>, adds <code>versionFrau { versionFile = file("../../version.properties") }</code> and sets <code>versionCode</code> / <code>versionName</code> from <code>versionFrau</code>.</li>
+        <li><strong>iOS</strong> (needs macOS): runs the bundled VersionFrau for Xcode script, which adds the scheme pre-action and Run Script phase and makes <code>VersionFrau.xcconfig</code> the base configuration.</li>
+      </ol>
+      <div class="table-scroll"><table>
+        <thead><tr><th>install option</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>--android-only</code> / <code>--ios-only</code></td><td>Set up one platform only</td></tr>
+          <tr><td><code>--file &lt;path&gt;</code></td><td>Version file relative to the project root, e.g. <code>config/version.properties</code></td></tr>
+          <tr><td><code>--root &lt;dir&gt;</code></td><td>React Native project root (default: nearest folder with a <code>package.json</code>)</td></tr>
+          <tr><td><code>--scheme &lt;name&gt;</code> / <code>--target &lt;name&gt;</code></td><td>iOS only: limit to a shared scheme / to targets (repeatable)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Expo</h3>
+      <p>Projects that run <code>expo prebuild</code> use the config plugin instead of <code>install</code>. It applies the same changes every time <code>android/</code> and <code>ios/</code> are generated. Expo Go can't load native modules; use a development build.</p>
+<pre><button class="copy" type="button">Copy</button><code>{
+  "expo": {
+    "plugins": ["@aralel/react-native-versionfrau"]
+  }
+}</code></pre>
+
+      <h3>Read the version in JavaScript</h3>
+<pre><button class="copy" type="button">Copy</button><code>import VersionFrau, { getVersionInfo } from '@aralel/react-native-versionfrau';
+
+&lt;Text&gt;Version {VersionFrau.versionName}, built {VersionFrau.buildTime}&lt;/Text&gt;;
+
+const { versionCode, isDebugBuild, major, minor, patch, build } = getVersionInfo();</code></pre>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Property</th><th>Debug</th><th>Release</th></tr></thead>
+        <tbody>
+          <tr><td><code>versionName</code></td><td><code>1.0.3.42</code></td><td><code>1.0.4</code></td></tr>
+          <tr><td><code>fullVersionName</code></td><td><code>1.0.3.42</code></td><td><code>1.0.4.0</code></td></tr>
+          <tr><td><code>marketingVersion</code></td><td><code>1.0.3</code></td><td><code>1.0.4</code></td></tr>
+          <tr><td><code>versionCode</code></td><td><code>1000003042</code></td><td><code>1000004000</code></td></tr>
+          <tr><td><code>buildTime</code></td><td colspan="2"><code>Nov 26, 2026</code></td></tr>
+          <tr><td><code>isDebugBuild</code></td><td><code>true</code></td><td><code>false</code></td></tr>
+          <tr><td><code>major</code> / <code>minor</code> / <code>patch</code> / <code>build</code></td><td><code>1</code> / <code>0</code> / <code>3</code> / <code>42</code></td><td><code>1</code> / <code>0</code> / <code>4</code> / <code>0</code></td></tr>
+          <tr><td><code>isManagedByVersionFrau</code></td><td colspan="2"><code>false</code> when the app wasn't built with VersionFrau</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Commands</h3>
+<pre><button class="copy" type="button">Copy</button><code>npx versionfrau-rn print                  # all values
+npx versionfrau-rn print releaseVersionCode
+npx versionfrau-rn bump build|patch|minor|major</code></pre>
+      <p class="callout">Android and iOS share the file, so a build on either platform moves both. Every release build raises <code>patch</code>, so releasing Android and then iOS from one file gives consecutive versions. To keep the same number on both stores, give each platform its own file: <code>versionfrau-rn install --android-only --file android/version.properties</code> and <code>versionfrau-rn install --ios-only --file ios/version.properties</code>. <code>npx react-native run-android</code> runs <code>installDebug</code>, which doesn't increment.</p>
+    </div>
+  </section>
+
   <!-- ============================ SCHEME ============================ -->
   <section id="scheme">
     <div class="wrap">
       <h2>The shared version scheme</h2>
-      <p class="sub">Both tools read and write the same file and use the same rules, so an Android app and an iOS app can carry identical versions.</p>
+      <p class="sub">All three tools read and write the same file and use the same rules, so an Android app and an iOS app can carry identical versions.</p>
       <p class="file">version.properties</p>
 <pre><code>major=1
 minor=0
@@ -438,17 +608,18 @@ build=0</code></pre>
       <details><summary>Can several projects share one version?</summary>
         <p>Yes. On Xcode use <code>versionfrau install … --file ../version.properties</code>; on Android set <code>versionFrau { versionFile = rootProject.file("../version.properties") }</code> above <code>android { }</code>. Xcode writes are locked, so parallel Xcode builds don't lose increments.</p></details>
       <details><summary>What does it cost?</summary>
-        <p>Nothing. Both tools are MIT-licensed open source by Aralel GmbH, Aachen. Issues and pull requests are welcome on GitHub.</p></details>
+        <p>Nothing. All three tools are MIT-licensed open source by Aralel GmbH, Aachen. Issues and pull requests are welcome on GitHub.</p></details>
     </div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <div>© 2026 Aralel GmbH · Aachen, Germany · MIT License</div>
+    <div>© 2026 Aralel GmbH · Made with ♡ in Aachen, Germany · MIT License</div>
     <div>
       <a href="https://github.com/aralel/versionfrau">Android repo</a> ·
       <a href="https://github.com/aralel/versionfrau-ios">Xcode repo</a> ·
+      <a href="https://www.npmjs.com/package/@aralel/react-native-versionfrau">React Native on npm</a> ·
       <a href="llms.txt">llms.txt</a> ·
       <a href="llms-full.txt">llms-full.txt</a> ·
       <a href="impressum.html">Impressum</a>

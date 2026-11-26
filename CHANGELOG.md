@@ -9,7 +9,7 @@
 - README: plugin version in the setup example is `0.0.18` (the `1.0.0` shown before was never released)
 - README: `version.properties` is created in the module folder (usually `app/version.properties`), not the project root
 - README: `versionCode` examples match the code (`1000003042` / `1000003000`, formula `major*1_000_000_000 + minor*1_000_000 + patch*1_000 + build`)
-- README: custom `versionFile` block must be placed above `android { }`; link to the website https://versionfrau.codehospital.com
+- README: custom `versionFile` block must be placed above `android { }`; link to the website https://versionfrau.aralel.com
 
 ### Xcode
 - VersionFrau for Xcode (added here as `xcode/`) moved to its own repository, [aralel/versionfrau-xcode](https://github.com/aralel/versionfrau-xcode), installable with Homebrew or a curl installer. The README links to it
